@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -20,7 +21,7 @@ var (
 
 Provided by ` + termlink.ColorLink("STRV", "https://strv.com", "red bold") + ".",
 		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Usage()
+			cobra.CheckErr(cmd.Usage())
 		},
 	}
 	cfgPath string
@@ -35,7 +36,7 @@ func init() {
 	)
 
 	rootCmd.PersistentFlags().StringVarP(&cfgPath,
-		"config", "c", "", "config file (default is $HOME/.tea.yaml)")
+		"config", "c", "", "config file (default is $HOME/.cup)")
 	rootCmd.PersistentFlags().BoolVar(&validateSkip,
 		"validate", false, "whether to skip validation")
 
@@ -58,39 +59,49 @@ type ContactInfo struct {
 
 // initRootConfig reads in config file and ENV variables if set.
 func initRootConfig() {
-	if cfgPath != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgPath)
-	} else {
-		// Find home directory.
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
+	// Find home directory.
+	home, err := os.UserHomeDir()
+	cobra.CheckErr(err)
 
-		// Search config in home directory with name ".tea" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigType("yaml")
-		viper.SetConfigName(".cup")
-	}
-
-	viper.AutomaticEnv() // read in environment variables that match
+	// Search config in home directory with name ".cup" (without extension).
+	viper.AddConfigPath(home)
+	viper.SetConfigType("yaml")
+	viper.SetConfigName(".cup")
 
 	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using default config file:", viper.ConfigFileUsed())
+	err = viper.ReadInConfig()
+	if errors.As(err, &viper.ConfigFileNotFoundError{}) {
+		// TODO: Add debug log here.
+	} else if err != nil {
+		// TODO: Add warning log here.
+	} else {
+		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
 
 	v := viper.New()
-	// Search local config in the root directory with name ".cup" (without extension).
-	v.AddConfigPath("./")
-	v.SetConfigType("yaml")
-	v.SetConfigName(".cup")
+	if cfgPath != "" {
+		// Use config file from the flag.
+		v.SetConfigFile(cfgPath)
+	} else {
+		// Search local config in the root directory with name ".cup" (without extension).
+		v.AddConfigPath("./")
+		v.SetConfigType("yaml")
+		v.SetConfigName(".cup")
+	}
 
 	// If a local config file is found, read it in and merge it with the default config.
-	if err := v.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using default config file:", v.ConfigFileUsed())
+	err = v.ReadInConfig()
+	if errors.As(err, &viper.ConfigFileNotFoundError{}) {
+		// TODO: Add debug log here.
+	} else if err != nil {
+		// TODO: Add warning log here.
+	} else {
+		fmt.Fprintln(os.Stderr, "Using config file:", v.ConfigFileUsed())
 
 		// Merge the local config into the existing default config. This will override
 		// any default settings by the local changes.
 		cobra.CheckErr(viper.MergeConfigMap(v.AllSettings()))
 	}
+
+	viper.AutomaticEnv() // read in environment variables that match
 }

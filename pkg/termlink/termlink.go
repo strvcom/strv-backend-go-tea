@@ -3,7 +3,7 @@ This file and this file only is subject to the following license.
 
 MIT License
 
-Copyright (c) [year] [fullname]
+Copyright (c) 2022 STRV
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,8 +22,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-Provided by STRV.
 */
 package termlink
 
@@ -33,9 +31,55 @@ import (
 	"strings"
 )
 
+var colorsList = map[string]string{
+	"black":     "30",
+	"red":       "31",
+	"green":     "32",
+	"yellow":    "33",
+	"blue":      "34",
+	"magenta":   "35",
+	"cyan":      "36",
+	"white":     "37",
+	"bold":      "1",
+	"italic":    "3",
+	"bgBlack":   "40",
+	"bgRed":     "41",
+	"bgGreen":   "42",
+	"bgYellow":  "43",
+	"bgBlue":    "44",
+	"bgMagenta": "45",
+	"bgCyan":    "46",
+	"bgWhite":   "47",
+}
+
+// Link creates a clickable link in the terminal's stdout.
+func Link(text string, url string) string {
+	if supportsHyperlinks() {
+		return "\x1b]8;;" + url + "\x07" + text + "\x1b]8;;\x07" + parseColor("reset")
+	} else {
+		return text + " (\u200B" + url + ")" + parseColor("reset")
+	}
+}
+
+// ColorLink creates a colored clickable link in the terminal's stdout.
+func ColorLink(text string, url string, color string) string {
+	textColor := parseColor(color)
+
+	if supportsHyperlinks() {
+		return "\x1b]8;;" + url + "\x07" + textColor + text + "\x1b]8;;\x07" + parseColor("reset")
+	} else {
+		return textColor + text + " (\u200B" + url + "\u200B)" + parseColor("reset")
+	}
+}
+
+// SupportsHyperlinks returns true if the terminal supports hyperlinks.
+func SupportsHyperlinks() bool {
+	return supportsHyperlinks()
+}
+
 func parseVersion(version string) (int, int, int) {
 	var major, minor, patch int
-	fmt.Sscanf(version, "%d.%d.%d", &major, &minor, &patch)
+	_, _ = fmt.Sscanf(version, "%d.%d.%d", &major, &minor, &patch)
 	return major, minor, patch
 }
 
@@ -81,27 +125,6 @@ func supportsHyperlinks() bool {
 	return false
 }
 
-var colorsList = map[string]string{
-	"black":     "30",
-	"red":       "31",
-	"green":     "32",
-	"yellow":    "33",
-	"blue":      "34",
-	"magenta":   "35",
-	"cyan":      "36",
-	"white":     "37",
-	"bold":      "1",
-	"italic":    "3",
-	"bgBlack":   "40",
-	"bgRed":     "41",
-	"bgGreen":   "42",
-	"bgYellow":  "43",
-	"bgBlue":    "44",
-	"bgMagenta": "45",
-	"bgCyan":    "46",
-	"bgWhite":   "47",
-}
-
 func isInList(list []string, value string) bool {
 	for _, v := range list {
 		if v == value {
@@ -125,27 +148,30 @@ func parseColor(color string) string {
 		if c == "" {
 			continue
 		}
-		if c == "bold" {
+
+		if isInList(acceptedForegroundColors, c) || isInList(acceptedBackgroundColors, c) {
+			colors = append(colors, colorsList[c])
+			continue
+		}
+
+		switch c {
+		case "bold":
 			colors = append(colors, colorsList["bold"])
-		} else if c == "italic" {
+		case "italic":
 			colors = append(colors, colorsList["italic"])
-		} else if c == "underline" {
+		case "underline":
 			colors = append(colors, colorsList["underline"])
-		} else if c == "blink" {
+		case "blink":
 			colors = append(colors, colorsList["blink"])
-		} else if c == "reverse" {
+		case "reverse":
 			colors = append(colors, colorsList["reverse"])
-		} else if c == "hidden" {
+		case "hidden":
 			colors = append(colors, colorsList["hidden"])
-		} else if c == "strike" {
+		case "strike":
 			colors = append(colors, colorsList["strike"])
-		} else if isInList(acceptedForegroundColors, c) {
-			colors = append(colors, colorsList[c])
-		} else if isInList(acceptedBackgroundColors, c) {
-			colors = append(colors, colorsList[c])
-		} else if c == "reset" {
+		case "reset":
 			colors = append(colors, colorsList["reset"])
-		} else {
+		default:
 			return ""
 		}
 	}
@@ -155,46 +181,4 @@ func parseColor(color string) string {
 	}
 
 	return "\u001b[" + strings.Join(colors, ";") + "m"
-}
-
-// Function Link creates a clickable link in the terminal's stdout.
-//
-// The function takes two parameters: text and url.
-//
-// The text parameter is the text to be displayed.
-// The url parameter is the URL to be opened when the link is clicked.
-//
-// The function returns the clickable link.
-func Link(text string, url string) string {
-	if supportsHyperlinks() {
-		return "\x1b]8;;" + url + "\x07" + text + "\x1b]8;;\x07" + parseColor("reset")
-	} else {
-		return text + " (\u200B" + url + ")" + parseColor("reset")
-	}
-}
-
-// Function LinkColor creates a colored clickable link in the terminal's stdout.
-//
-// The function takes three parameters: text, url and color.
-//
-// The text parameter is the text to be displayed.
-// The url parameter is the URL to be opened when the link is clicked.
-// The color parameter is the color of the link.
-//
-// The function returns the clickable link.
-func ColorLink(text string, url string, color string) string {
-	textColor := parseColor(color)
-
-	if supportsHyperlinks() {
-		return "\x1b]8;;" + url + "\x07" + textColor + text + "\x1b]8;;\x07" + parseColor("reset")
-	} else {
-		return textColor + text + " (\u200B" + url + ")" + parseColor("reset")
-	}
-}
-
-// Function SupportsHyperlinks returns true if the terminal supports hyperlinks.
-//
-// The function returns true if the terminal supports hyperlinks, false otherwise.
-func SupportsHyperlinks() bool {
-	return supportsHyperlinks()
 }
