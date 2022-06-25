@@ -13,21 +13,22 @@ import (
 )
 
 var (
+	colorLinkSTRV = termlink.ColorLink("STRV", "https://strv.com", "red bold") + "."
+
 	// rootCmd represents the base command when called without any subcommands.
 	rootCmd = &cobra.Command{
 		Use:   "tea",
 		Short: "Go Tea!",
 		Long: `Universal set of tools to make development in Go as simple as making a cup of tea.
 
-Provided by ` + termlink.ColorLink("STRV", "https://strv.com", "red bold") + ".",
+Provided by ` + colorLinkSTRV,
 		Run: func(cmd *cobra.Command, args []string) {
 			cobra.CheckErr(cmd.Usage())
 		},
 	}
-	cfgPath string
+	rootOpt RootOptions
 
-	validate     *validator.Validate //lint:ignore U1000 Ignore unused
-	validateSkip bool
+	validate *validator.Validate //lint:ignore U1000 Ignore unused
 )
 
 func init() {
@@ -35,26 +36,36 @@ func init() {
 		initRootConfig,
 	)
 
-	rootCmd.PersistentFlags().StringVarP(&cfgPath,
+	rootCmd.PersistentFlags().StringVarP(&rootOpt.ConfigPath,
 		"config", "c", "", "config file (default is $HOME/.cup)")
-	rootCmd.PersistentFlags().BoolVar(&validateSkip,
+	rootCmd.PersistentFlags().BoolVar(&rootOpt.SkipValidation,
 		"validate", false, "whether to skip validation")
+	rootCmd.PersistentFlags().BoolVar(&rootOpt.Yes,
+		"yes",
+		false, "Confirm all prompts (defaults to false)",
+	)
 
 	validate = validator.New()
 }
 
 type RootConfig struct {
-	Module  string `json:"module" validate:"required"`
-	Author  string `json:"author" validate:"required"`
-	Version string `json:"version" validate:"required,semver"`
+	Module  string `json:"module" yaml:"module" validate:"required"`
+	Author  string `json:"author" yaml:"author" validate:"required"`
+	Version string `json:"version" yaml:"version" validate:"required,semver"`
 
-	Contributors []ContactInfo `json:"contributors,omitempty" validate:"omitempty"`
+	Contributors []ContactInfo `json:"contributors" yaml:"contributors,omitempty" validate:"omitempty"`
+}
+
+type RootOptions struct {
+	ConfigPath     string
+	SkipValidation bool
+	Yes            bool
 }
 
 type ContactInfo struct {
-	Name  string `json:"name" validate:"required"`
-	Email string `json:"email" validate:"required,email"`
-	Phone string `json:"phone" validate:"omitempty,e164"`
+	Name  string `json:"name" yaml:"name" validate:"required"`
+	Email string `json:"email" yaml:"email" validate:"required,email"`
+	Phone string `json:"phone" yaml:"phone" validate:"omitempty,e164"`
 }
 
 // initRootConfig reads in config file and ENV variables if set.
@@ -79,22 +90,22 @@ func initRootConfig() {
 	}
 
 	v := viper.New()
-	if cfgPath != "" {
+	v.SetConfigType("yaml")
+	if rootOpt.ConfigPath != "" {
 		// Use config file from the flag.
-		v.SetConfigFile(cfgPath)
+		v.SetConfigFile(rootOpt.ConfigPath)
 	} else {
 		// Search local config in the root directory with name ".cup" (without extension).
 		v.AddConfigPath("./")
-		v.SetConfigType("yaml")
 		v.SetConfigName(".cup")
 	}
 
 	// If a local config file is found, read it in and merge it with the default config.
 	err = v.ReadInConfig()
 	if errors.As(err, &viper.ConfigFileNotFoundError{}) {
-		// TODO: Add debug log here.
+		fmt.Fprintln(os.Stderr, "Local config file not found. Skipping.")
 	} else if err != nil {
-		// TODO: Add warning log here.
+		fmt.Fprintln(os.Stderr, err)
 	} else {
 		fmt.Fprintln(os.Stderr, "Using config file:", v.ConfigFileUsed())
 
