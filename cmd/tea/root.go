@@ -12,6 +12,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+var version string //lint:ignore U1000 version is set during build
+
 var (
 	colorLinkSTRV = termlink.ColorLink("STRV", "https://strv.com", "red bold") + "."
 
@@ -28,7 +30,7 @@ Provided by ` + colorLinkSTRV,
 	}
 	rootOpt RootOptions
 
-	validate *validator.Validate //lint:ignore U1000 Ignore unused
+	validate *validator.Validate
 )
 
 func init() {
@@ -70,6 +72,10 @@ type ContactInfo struct {
 
 // initRootConfig reads in config file and ENV variables if set.
 func initRootConfig() {
+	if cobra.NoArgs(rootCmd, os.Args) != nil {
+		return
+	}
+
 	// Find home directory.
 	home, err := os.UserHomeDir()
 	cobra.CheckErr(err)
