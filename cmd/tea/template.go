@@ -29,7 +29,7 @@ var (
 By default, it executes all files ending with *.template in the local directory and its subdirectories.
 
 Example:
-	gokit repo init --recursive`,
+	tea repo template --recursive`,
 		Run: func(cmd *cobra.Command, args []string) {
 			cobra.CheckErr(viper.Unmarshal(&repoTemplateCfg, decode.WithTagName("json")))
 
@@ -39,8 +39,8 @@ Example:
 			cobra.CheckErr(runRepoTemplate(&repoTemplateCfg, &repoTemplateOpt))
 		},
 	}
-	repoTemplateCfg RepoTemplateConfig  = RepoTemplateConfig{}
-	repoTemplateOpt RepoTemplateOptions = RepoTemplateOptions{}
+	repoTemplateCfg = RepoTemplateConfig{}
+	repoTemplateOpt = RepoTemplateOptions{}
 )
 
 func init() {
@@ -111,10 +111,10 @@ func runRepoTemplate(
 	}
 
 	tVars := map[string]any{}
-	if err := mapstructure.Decode(repoTemplateCfg.RootConfig, &tVars); err != nil {
+	if err := mapstructure.Decode(conf.RootConfig, &tVars); err != nil {
 		return fmt.Errorf("decode template vars: %w", err)
 	}
-	if err := mapstructure.Decode(repoTemplateCfg.RepoConfig, &tVars); err != nil {
+	if err := mapstructure.Decode(conf.RepoConfig, &tVars); err != nil {
 		return fmt.Errorf("decode template vars: %w", err)
 	}
 	for _, v := range conf.Template.Vars {

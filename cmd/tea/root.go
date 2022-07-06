@@ -12,8 +12,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-var version string //lint:ignore U1000 version is set during build
-
 var (
 	colorLinkSTRV = termlink.ColorLink("STRV", "https://strv.com", "red bold") + "."
 
