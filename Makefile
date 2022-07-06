@@ -3,7 +3,8 @@ GO := $(shell which go)
 APP_VERSION ?= "v0.0.0"
 
 .PHONY:
-	run \
+	run  \
+	test \
 	build
 
 all: fmt vet build
@@ -17,6 +18,9 @@ vet:
 run: RUN_ARGS=--help
 run: fmt vet
 	$(GO) run ./cmd/tea $(RUN_ARGS)
+
+test:
+	$(GO) test ./... -cover
 
 build: BUILD_OUTPUT=./bin/tea
 build:

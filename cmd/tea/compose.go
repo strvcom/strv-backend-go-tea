@@ -32,7 +32,7 @@ This command can also be used as an embedded go generator to embed OpenAPI speci
 Example:
 	import _ "embed
 
-	//go:generate gokit openapi compose -i ./openapi_compose.yaml -o ./openapi.yaml
+	//go:generate tea openapi compose -i ./openapi_compose.yaml -o ./openapi.yaml
 	//go:embed openapi.yaml
 	var OpenAPI string
  `,
