@@ -24,4 +24,4 @@ test:
 
 build: BUILD_OUTPUT=./bin/tea
 build:
-	CGO_ENABLED=0 $(GO) build -ldflags "-X go.strv.io/main.version=$(APP_VERSION)" -mod=readonly -o $(BUILD_OUTPUT) ./cmd/tea
+	CGO_ENABLED=0 $(GO) build -ldflags "-X main.version=$(APP_VERSION)" -mod=readonly -o $(BUILD_OUTPUT) ./cmd/tea
