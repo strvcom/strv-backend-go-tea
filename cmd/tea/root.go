@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"os"
 
+	"go.strv.io/tea/pkg/decode"
 	"go.strv.io/tea/pkg/termlink"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 var (
@@ -26,6 +29,7 @@ Provided by ` + colorLinkSTRV,
 			cobra.CheckErr(cmd.Usage())
 		},
 	}
+	rootCfg RootConfig
 	rootOpt RootOptions
 
 	validate *validator.Validate
@@ -37,9 +41,9 @@ func init() {
 	)
 
 	rootCmd.PersistentFlags().StringVarP(&rootOpt.ConfigPath,
-		"config", "c", "", "config file (default is $HOME/.cup)")
+		"config", "c", "", "Config file (default is $HOME/.cup)")
 	rootCmd.PersistentFlags().BoolVar(&rootOpt.SkipValidation,
-		"validate", false, "whether to skip validation")
+		"validate", false, "Whether to skip validation")
 	rootCmd.PersistentFlags().BoolVar(&rootOpt.Yes,
 		"yes",
 		false, "Confirm all prompts (defaults to false)",
@@ -49,11 +53,8 @@ func init() {
 }
 
 type RootConfig struct {
-	Module  string `json:"module" yaml:"module" validate:"required"`
-	Author  string `json:"author" yaml:"author" validate:"required"`
-	Version string `json:"version" yaml:"version" validate:"required,semver"`
-
-	Contributors []ContactInfo `json:"contributors" yaml:"contributors,omitempty" validate:"omitempty"`
+	LogLevel   zap.AtomicLevel `json:"log_level" yaml:"log_level"`
+	RepoConfig RepoConfig      `json:"repo" yaml:"repo"`
 }
 
 type RootOptions struct {
@@ -70,7 +71,8 @@ type ContactInfo struct {
 
 // initRootConfig reads in config file and ENV variables if set.
 func initRootConfig() {
-	if cobra.NoArgs(rootCmd, os.Args) != nil {
+	// Don't load config when no args. Just return and print help.
+	if len(os.Args) <= 1 {
 		return
 	}
 
@@ -118,5 +120,12 @@ func initRootConfig() {
 		cobra.CheckErr(viper.MergeConfigMap(v.AllSettings()))
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
+	err = viper.Unmarshal(
+		&rootCfg,
+		decode.WithTagName("json"),
+		viper.DecodeHook(mapstructure.TextUnmarshallerHookFunc()),
+	)
+	cobra.CheckErr(err)
+
+	repoTemplateCfg = rootCfg.RepoConfig.RepoTemplateConfig
 }

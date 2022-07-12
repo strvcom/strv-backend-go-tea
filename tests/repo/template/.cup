@@ -1,11 +1,6 @@
-module: test
-
 repo:
   template:
-    vars:
-    - name: module
-      type: string
-      data: ""
-    - name: author
-      type: string
-      data: ""
+    module: test
+    author: Unknown author
+    version: 0.1.0
+    vars: []

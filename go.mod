@@ -10,7 +10,15 @@ require (
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.8.0
+	go.uber.org/zap v1.21.0
 	gopkg.in/yaml.v2 v2.4.0
+)
+
+require (
+	go.strv.io/env v0.0.0-20220713065229-05a347d66f45 // indirect
+	go.strv.io/logging v0.0.0-20220713090213-b959ecb9e1ae // indirect
+	go.strv.io/net v0.0.0-20220707142957-8e5706797a43 // indirect
+	go.strv.io/time v0.0.0-20220704134925-b54c54c58461 // indirect
 )
 
 require (
@@ -45,6 +53,8 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.3.0 // indirect
+	go.uber.org/atomic v1.7.0 // indirect
+	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4 // indirect
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	golang.org/x/text v0.3.7 // indirect
