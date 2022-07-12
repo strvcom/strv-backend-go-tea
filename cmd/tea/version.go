@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version string // version is set during build
+var version = "unknown" // version is set during build
 
 var (
 	versionCmd = &cobra.Command{
@@ -15,9 +15,7 @@ var (
 		Long: `This command displays current version and exits.
 
 Example:
-	tea version
-
-Provided by ` + colorLinkSTRV,
+	tea version`,
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println(version)
 		},
