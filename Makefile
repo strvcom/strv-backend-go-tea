@@ -19,9 +19,12 @@ run: RUN_ARGS=--help
 run: fmt vet
 	$(GO) run ./cmd/tea $(RUN_ARGS)
 
-test:
+test: generate
 	$(GO) test ./... -cover
 
 build: BUILD_OUTPUT=./bin/tea
-build:
+build: generate
 	CGO_ENABLED=0 $(GO) build -ldflags "-X main.version=$(APP_VERSION)" -mod=readonly -o $(BUILD_OUTPUT) ./cmd/tea
+
+generate:
+	$(GO) generate ./...
