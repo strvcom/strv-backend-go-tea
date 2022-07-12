@@ -16,6 +16,19 @@ import (
 )
 
 var (
+	oapiCmd = &cobra.Command{
+		Use:     "openapi",
+		Aliases: []string{"oapi"},
+		Short:   "OpenAPI management tools",
+		Long: `This command provides a set of tools to manage OpenAPI specifications.
+
+Example:
+	tea openapi -h`,
+		Run: func(cmd *cobra.Command, args []string) {
+			cobra.CheckErr(cmd.Usage())
+		},
+	}
+
 	// composeCmd represents the compose command
 	composeCmd = &cobra.Command{
 		Use:   "compose",
@@ -47,11 +60,12 @@ Example:
 )
 
 func init() {
-	oapiCmd.AddCommand(composeCmd)
-
 	composeCmd.Flags().StringVarP(&openapiComposeOptions.SourceFilePath, "source", "i", "", "path to OpenAPI schema to compose")
 	composeCmd.Flags().StringVarP(&openapiComposeOptions.OutputFilePath, "output", "o", "", "path to OpenAPI output (defaults to STDOUT)")
 	cobra.CheckErr(composeCmd.MarkFlagRequired("source"))
+
+	oapiCmd.AddCommand(composeCmd)
+	rootCmd.AddCommand(oapiCmd)
 }
 
 type OAPIComposeOptions struct {
@@ -64,7 +78,7 @@ func runOAPICompose(
 ) error {
 	specDoc, err := load.Spec(opts.SourceFilePath)
 	if err != nil {
-		return errors.NewErrCommand(err, 2)
+		return errors.NewCommandError(err, 2)
 	}
 
 	exp, err := specDoc.Compose(&spec.ExpandOptions{
@@ -72,27 +86,28 @@ func runOAPICompose(
 		SkipSchemas:  false,
 	})
 	if err != nil {
-		return errors.NewErrCommand(err, 3)
+		return errors.NewCommandError(err, 3)
 	}
 
 	b, err := json.Marshal(exp.Spec())
-	if err == nil {
-		d, err := swag.BytesToYAMLDoc(b)
-		if err != nil {
-			return errors.NewErrCommand(err, 2)
-		}
-		b, err = yaml.Marshal(d)
-		if err != nil {
-			return errors.NewErrCommand(err, 2)
-		}
+	if err != nil {
+		return errors.NewCommandError(err, 2)
+	}
+	d, err := swag.BytesToYAMLDoc(b)
+	if err != nil {
+		return errors.NewCommandError(err, 2)
+	}
+	b, err = yaml.Marshal(d)
+	if err != nil {
+		return errors.NewCommandError(err, 2)
 	}
 
 	if opts.OutputFilePath == "" {
-		fmt.Println(b)
+		fmt.Println(string(b))
 	} else {
 		err = ioutil.WriteFile(opts.OutputFilePath, b, 0644)
 		if err != nil {
-			return errors.NewErrCommand(err, 2)
+			return errors.NewCommandError(err, 2)
 		}
 	}
 
