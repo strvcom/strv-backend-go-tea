@@ -1,0 +1,10 @@
+OpenAPI:
+  get:
+    tags:
+      - internal
+    summary: Get content of openapi.yaml
+    security:
+      - scopes: ["read"]
+    responses:
+      "200":
+        description: Content of this file

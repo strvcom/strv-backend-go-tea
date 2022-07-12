@@ -1,0 +1,11 @@
+module: test
+
+repo:
+  template:
+    vars:
+    - name: module
+      type: string
+      data: ""
+    - name: author
+      type: string
+      data: ""

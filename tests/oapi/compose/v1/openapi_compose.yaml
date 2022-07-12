@@ -1,0 +1,41 @@
+openapi: 3.0.3
+
+info:
+  title: test
+  version: 0.0.0
+  description: |
+    Test OpenAPI schema
+  contact:
+    email: "test@strv.com"
+
+externalDocs:
+  description: "Source"
+  url: "https://github.com/strvcom"
+
+tags:
+  - name: common
+    description: Common application endpoints, i.e. /healthz and /statusz
+  - name: internal
+    description: Internal endpoints
+
+servers:
+  - url: "http://0.0.0.0:5000"
+    description: Development environment (local)
+
+paths:
+  /healthz:
+    $ref: './paths/common.yaml#/Healthz'
+  /statusz:
+    $ref: './paths/common.yaml#/Statusz'
+  /-/schema:
+    $ref: './paths/internal.yaml#/OpenAPI'
+
+components:
+  securitySchemes:
+    scopes:
+      type: http
+      scheme: bearer
+    internalAuthKey:
+      type: http
+      scheme: bearer
+      bearerFormat: string
