@@ -1,17 +1,21 @@
 package errors
 
-func NewErrCommand(err error, code int) *ErrCommand {
-	return &ErrCommand{
-		Err:  err,
+func NewCommandError(err error, code int) *CommandError {
+	return &CommandError{
+		err:  err,
 		Code: code,
 	}
 }
 
-type ErrCommand struct {
-	Err  error
+type CommandError struct {
+	err  error
 	Code int
 }
 
-func (c *ErrCommand) Error() string {
-	return c.Err.Error()
+func (e *CommandError) Error() string {
+	return e.err.Error()
+}
+
+func (e *CommandError) Unwrap() error {
+	return e.err
 }

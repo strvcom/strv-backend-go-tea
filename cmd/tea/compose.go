@@ -38,7 +38,7 @@ Example:
  `,
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := runOAPICompose(openapiComposeOptions); err != nil {
-				os.Exit(err.(*errors.ErrCommand).Code)
+				os.Exit(err.(*errors.CommandError).Code)
 			}
 		},
 	}
@@ -51,7 +51,7 @@ func init() {
 
 	composeCmd.Flags().StringVarP(&openapiComposeOptions.SourceFilePath, "source", "i", "", "path to OpenAPI schema to compose")
 	composeCmd.Flags().StringVarP(&openapiComposeOptions.OutputFilePath, "output", "o", "", "path to OpenAPI output (defaults to STDOUT)")
-	composeCmd.MarkFlagRequired("source")
+	cobra.CheckErr(composeCmd.MarkFlagRequired("source"))
 }
 
 type OAPIComposeOptions struct {
