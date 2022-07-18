@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -14,13 +16,11 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/manifoldco/promptui"
-	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var (
-	// initCmd represents the init command
 	repoTemplateCmd = &cobra.Command{
 		Use:   "template",
 		Short: "Template repository",
@@ -31,14 +31,22 @@ By default, it executes all files ending with *.template in the local directory 
 Example:
 	tea repo template --recursive`,
 		Run: func(cmd *cobra.Command, args []string) {
-			cobra.CheckErr(viper.Unmarshal(&repoTemplateCfg, decode.WithTagName("json")))
+			v := viper.Sub(repoTemplateCfg.Key())
+			if v != nil {
+				cobra.CheckErr(v.Unmarshal(
+					&repoTemplateCfg,
+					decode.WithTagName("json"),
+					decode.WithDecodeHook(decode.UnmarshalJSONHookFunc),
+				))
+			}
 
 			if !rootOpt.SkipValidation {
-				cobra.CheckErr(validate.Struct(&repoTemplateCfg))
+				cobra.CheckErr(validate.Struct(repoTemplateCfg))
 			}
 			cobra.CheckErr(runRepoTemplate(&repoTemplateCfg, &repoTemplateOpt))
 		},
 	}
+
 	repoTemplateCfg = RepoTemplateConfig{}
 	repoTemplateOpt = RepoTemplateOptions{}
 )
@@ -70,7 +78,7 @@ func init() {
 		"s",
 		".template", "Template file suffix. This suffix will be trimmed (defaults to .template)",
 	)
-	repoTemplateCmd.Flags().StringArrayVar(&repoTemplateOpt.Vars,
+	repoTemplateCmd.Flags().StringArrayVar(&repoTemplateOpt.Values,
 		"set",
 		[]string{}, "Set custom key-value pair passed to the template engine.",
 	)
@@ -79,18 +87,43 @@ func init() {
 type RepoTemplateOptions struct {
 	Dir       string
 	Glob      string
-	Vars      []string
-	Recursive bool
 	Remove    bool
 	Suffix    string
+	Values    []string
+	Recursive bool
 }
 
 type RepoTemplateConfig struct {
-	RepoConfig `json:",squash"` //lint:ignore SA5008 squash is mapstructure directive
+	Module       string                   `json:"module" yaml:"module" validate:"required"`
+	Author       string                   `json:"author" yaml:"author" validate:"required"`
+	Version      string                   `json:"version" yaml:"version" validate:"required,semver"`
+	Values       RepoTemplateValuesMapper `json:"values" yaml:"vars" validate:"omitempty"`
+	Contributors []ContactInfo            `json:"contributors" yaml:"contributors,omitempty" validate:"omitempty"`
+}
 
-	Template struct {
-		Vars []RepoTemplateVar `json:"vars" yaml:"vars"`
-	} `json:"template" yaml:"template"`
+func (*RepoTemplateConfig) Key() string {
+	return "repo.template"
+}
+
+type RepoTemplateValuesMapper struct {
+	raw  []byte
+	orig []RepoTemplateVar
+	data map[string]any
+}
+
+func (r *RepoTemplateValuesMapper) MarshalJSON() ([]byte, error) {
+	return json.Marshal(r.data)
+}
+
+func (r *RepoTemplateValuesMapper) UnmarshalJSON(data []byte) error {
+	if err := json.Unmarshal(data, &r.orig); err != nil {
+		return err
+	}
+	r.data = map[string]any{}
+	for _, v := range r.orig {
+		r.data[v.Name] = v.Data
+	}
+	return nil
 }
 
 type RepoTemplateVar struct {
@@ -110,23 +143,22 @@ func runRepoTemplate(
 		matchFn = func(dir, glob string) ([]string, error) { return filepath.Glob(filepath.Join(dir, glob)) }
 	}
 
-	tVars := map[string]any{}
-	if err := mapstructure.Decode(conf.RootConfig, &tVars); err != nil {
-		return fmt.Errorf("decode template vars: %w", err)
+	tData, err := decode.ToMap(conf)
+	if err != nil {
+		return fmt.Errorf("decode template data: %w", err)
 	}
-	if err := mapstructure.Decode(conf.RepoConfig, &tVars); err != nil {
-		return fmt.Errorf("decode template vars: %w", err)
+	if _, ok := tData["values"]; !ok {
+		return errors.New("missing key 'values'")
 	}
-	for _, v := range conf.Template.Vars {
-		tVars[v.Name] = v.Data
-	}
-	// opts.Vars override conf.Vars
-	for _, v := range opts.Vars {
-		s := strings.Split(v, "=")
-		if len(s) != 2 {
-			return fmt.Errorf("invalid template var: %q", v)
+	if v, ok := tData["values"].(map[string]any); !ok {
+		return fmt.Errorf("invalid type of key 'values': expected 'map[string]any', got '%t'", tData["values"])
+	} else {
+		if err := overrideValuesByOpts(v, opts.Values); err != nil {
+			return fmt.Errorf("override template data: %w", err)
 		}
-		tVars[s[0]] = s[1]
+	}
+	if err := toCapitalKeys(tData, 0, 0); err != nil {
+		return fmt.Errorf("capitalize keys: %w", err)
 	}
 
 	tFiles, err := matchFn(opts.Dir, opts.Glob)
@@ -140,7 +172,7 @@ func runRepoTemplate(
 		if err != nil {
 			return fmt.Errorf("parse files: %w", err)
 		}
-		if err := t.Execute(&b, tVars); err != nil {
+		if err := t.Execute(&b, tData); err != nil {
 			return fmt.Errorf("execute template: %w", err)
 		}
 
@@ -177,6 +209,45 @@ func runRepoTemplate(
 		}
 	}
 
+	return nil
+}
+
+func overrideValuesByOpts(data map[string]any, valueOpts []string) error {
+	v := viper.New()
+	for _, to := range valueOpts {
+		s := strings.Split(to, "=")
+		if len(s) != 2 {
+			return fmt.Errorf("invalid template value: %q", to)
+		}
+
+		key, value := s[0], s[1]
+		if key[0] == '.' {
+			return fmt.Errorf("invalid template key: %q", key)
+		}
+		v.Set(key, value)
+	}
+	for k, v := range v.AllSettings() {
+		data[k] = v
+	}
+
+	return nil
+}
+
+func toCapitalKeys(data map[string]any, depth, maxDepth int) error {
+	for k, v := range data {
+		if depth <= maxDepth {
+			newKey := strings.ToUpper(string(k[0])) + k[1:]
+			if newKey != k {
+				data[newKey] = v
+				delete(data, k)
+			}
+		}
+		if v, ok := v.(map[string]any); ok {
+			if err := toCapitalKeys(v, depth+1, maxDepth); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 

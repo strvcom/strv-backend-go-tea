@@ -23,9 +23,7 @@ Provided by ` + colorLinkSTRV,
 	}
 )
 
-type RepoConfig struct {
-	RootConfig `json:",squash"` //lint:ignore SA5008 squash is mapstructure directive
-}
+type RepoConfig struct{}
 
 func init() {
 	rootCmd.AddCommand(repoCmd)

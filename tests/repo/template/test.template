@@ -1,1 +1,3 @@
 module: {{ .Module }}
+config:
+    addr: "{{ .Values.config.addr }}"

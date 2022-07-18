@@ -1,11 +1,8 @@
-module: test
-
 repo:
   template:
-    vars:
-    - name: module
-      type: string
-      data: ""
-    - name: author
-      type: string
-      data: ""
+    module: test
+    author: test
+    values:
+      - name: config
+        data:
+          addr: :8080
