@@ -48,13 +48,7 @@ func init() {
 	validate = validator.New()
 }
 
-type RootConfig struct {
-	Module  string `json:"module" yaml:"module" validate:"required"`
-	Author  string `json:"author" yaml:"author" validate:"required"`
-	Version string `json:"version" yaml:"version" validate:"required,semver"`
-
-	Contributors []ContactInfo `json:"contributors" yaml:"contributors,omitempty" validate:"omitempty"`
-}
+type RootConfig struct{}
 
 type RootOptions struct {
 	ConfigPath     string
@@ -70,7 +64,7 @@ type ContactInfo struct {
 
 // initRootConfig reads in config file and ENV variables if set.
 func initRootConfig() {
-	if cobra.NoArgs(rootCmd, os.Args) != nil {
+	if len(os.Args) <= 1 {
 		return
 	}
 
