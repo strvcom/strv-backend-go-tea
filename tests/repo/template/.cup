@@ -1,8 +1,9 @@
 repo:
   template:
     module: test
-    author: test
+    author: Jane Doe
     values:
       - name: config
         data:
-          addr: :8080
+          port: 8080
+    version: 0.0.0
