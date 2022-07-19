@@ -38,7 +38,7 @@ Example:
  `,
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := runOAPICompose(openapiComposeOptions); err != nil {
-				os.Exit(err.(*errors.ErrCommand).Code)
+				os.Exit(err.(*errors.CommandError).Code)
 			}
 		},
 	}
@@ -64,7 +64,7 @@ func runOAPICompose(
 ) error {
 	specDoc, err := load.Spec(opts.SourceFilePath)
 	if err != nil {
-		return errors.NewErrCommand(err, 2)
+		return errors.NewCommandError(err, 2)
 	}
 
 	exp, err := specDoc.Compose(&spec.ExpandOptions{
@@ -72,18 +72,18 @@ func runOAPICompose(
 		SkipSchemas:  false,
 	})
 	if err != nil {
-		return errors.NewErrCommand(err, 3)
+		return errors.NewCommandError(err, 3)
 	}
 
 	b, err := json.Marshal(exp.Spec())
 	if err == nil {
 		d, err := swag.BytesToYAMLDoc(b)
 		if err != nil {
-			return errors.NewErrCommand(err, 2)
+			return errors.NewCommandError(err, 2)
 		}
 		b, err = yaml.Marshal(d)
 		if err != nil {
-			return errors.NewErrCommand(err, 2)
+			return errors.NewCommandError(err, 2)
 		}
 	}
 
@@ -92,7 +92,7 @@ func runOAPICompose(
 	} else {
 		err = ioutil.WriteFile(opts.OutputFilePath, b, 0644)
 		if err != nil {
-			return errors.NewErrCommand(err, 2)
+			return errors.NewCommandError(err, 2)
 		}
 	}
 
