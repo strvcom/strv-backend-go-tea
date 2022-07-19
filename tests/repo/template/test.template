@@ -1,3 +1,5 @@
 module: {{ .Module }}
+author: {{ .Author }}
 config:
     addr: "{{ .Values.config.addr }}"
+version: {{ .Version }}
