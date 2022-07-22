@@ -22,6 +22,9 @@ vendor/
 **/*.bkp
 **/*.tmp
 
+# Generated files
+*_gen.go
+
 # IDEs
 .idea/
 .vscode/
