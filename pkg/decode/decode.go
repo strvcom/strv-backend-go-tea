@@ -2,7 +2,6 @@ package decode
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 
 	"github.com/mitchellh/mapstructure"
@@ -37,7 +36,6 @@ func UnmarshalJSONHookFunc(
 	t reflect.Type,
 	d interface{},
 ) (interface{}, error) {
-	fmt.Println(f, t, d)
 	r := reflect.New(t).Interface()
 	u, ok := r.(interface{ UnmarshalJSON([]byte) error })
 	if !ok {

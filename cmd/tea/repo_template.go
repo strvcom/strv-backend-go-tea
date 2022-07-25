@@ -97,8 +97,8 @@ type RepoTemplateConfig struct {
 	Module       string                   `json:"module" yaml:"module" validate:"required"`
 	Author       string                   `json:"author" yaml:"author" validate:"required"`
 	Version      string                   `json:"version" yaml:"version" validate:"required,semver"`
-	Values       RepoTemplateValuesMapper `json:"values" yaml:"vars" validate:"omitempty"`
-	Contributors []ContactInfo            `json:"contributors" yaml:"contributors,omitempty" validate:"omitempty"`
+	Values       RepoTemplateValuesMapper `json:"values" yaml:"vars"`
+	Contributors []ContactInfo            `json:"contributors" yaml:"contributors"`
 }
 
 func (*RepoTemplateConfig) Key() string {
@@ -106,7 +106,6 @@ func (*RepoTemplateConfig) Key() string {
 }
 
 type RepoTemplateValuesMapper struct {
-	raw  []byte
 	orig []RepoTemplateVar
 	data map[string]any
 }
@@ -143,34 +142,24 @@ func runRepoTemplate(
 		matchFn = func(dir, glob string) ([]string, error) { return filepath.Glob(filepath.Join(dir, glob)) }
 	}
 
-	tData, err := decode.ToMap(conf)
+	tData, err := toTemplateData(conf, opts)
 	if err != nil {
-		return fmt.Errorf("decode template data: %w", err)
-	}
-	if _, ok := tData["values"]; !ok {
-		return errors.New("missing key 'values'")
-	}
-	if v, ok := tData["values"].(map[string]any); !ok {
-		return fmt.Errorf("invalid type of key 'values': expected 'map[string]any', got '%t'", tData["values"])
-	} else {
-		if err := overrideValuesByOpts(v, opts.Values); err != nil {
-			return fmt.Errorf("override template data: %w", err)
-		}
+		return fmt.Errorf("capitalizing keys: %w", err)
 	}
 	if err := toCapitalKeys(tData, 0, 0); err != nil {
-		return fmt.Errorf("capitalize keys: %w", err)
+		return fmt.Errorf("capitalizing keys: %w", err)
 	}
 
 	tFiles, err := matchFn(opts.Dir, opts.Glob)
 	if err != nil {
-		return fmt.Errorf("locate template files: %w", err)
+		return fmt.Errorf("locating template files: %w", err)
 	}
 	for _, fPath := range tFiles {
 		var b bytes.Buffer
 
 		t, err := template.New(filepath.Base(fPath)).Funcs(sprig.GenericFuncMap()).ParseFiles(fPath)
 		if err != nil {
-			return fmt.Errorf("parse files: %w", err)
+			return fmt.Errorf("parsing file: %w", err)
 		}
 		if err := t.Execute(&b, tData); err != nil {
 			return fmt.Errorf("execute template: %w", err)
@@ -178,34 +167,64 @@ func runRepoTemplate(
 
 		p := strings.TrimSuffix(fPath, opts.Suffix)
 		if err := ioutil.WriteFile(p, b.Bytes(), 0644); err != nil {
-			return fmt.Errorf("write file %q: %w", p, err)
+			return fmt.Errorf("writing file %q: %w", p, err)
 		}
 	}
 
 	if opts.Remove {
-		if !rootOpt.Yes {
-			t := &promptui.PromptTemplates{
-				Invalid: `{{ "Operation aborted" | red }}`,
-				Success: "",
-				Confirm: `{{ . | bold }} {{ "[y/N]" | faint }}`,
-			}
+		if err := removeTemplateFiles(tFiles, !rootOpt.Yes); err != nil {
+			return fmt.Errorf("removing template files: %w", err)
+		}
+	}
 
-			prompt := promptui.Prompt{
-				Label:     "All template files have been templated. Do you want to remove them?",
-				Templates: t,
-				IsConfirm: true,
-			}
-			_, err := prompt.Run()
-			if err != nil {
-				// Immediately exit if the user doesn't want to remove the files.
-				os.Exit(1)
-			}
+	return nil
+}
+
+func toTemplateData(
+	conf *RepoTemplateConfig,
+	opts *RepoTemplateOptions,
+) (map[string]any, error) {
+	tData, err := decode.ToMap(conf)
+	if err != nil {
+		return nil, fmt.Errorf("decoding template data: %w", err)
+	}
+	if _, ok := tData["values"]; !ok {
+		return nil, errors.New("missing key 'values'")
+	}
+	vals, ok := tData["values"].(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("invalid type of key 'values': expected 'map[string]any', got '%t'", tData["values"])
+	}
+	if err := overrideValuesByOpts(vals, opts.Values); err != nil {
+		return nil, fmt.Errorf("overriding template data: %w", err)
+	}
+
+	return tData, nil
+}
+
+func removeTemplateFiles(files []string, skipPrompt bool) error {
+	if skipPrompt {
+		t := &promptui.PromptTemplates{
+			Invalid: `{{ "Operation aborted" | red }}`,
+			Success: "",
+			Confirm: `{{ . | bold }} {{ "[y/N]" | faint }}`,
 		}
 
-		for _, fPath := range tFiles {
-			if err := os.Remove(fPath); err != nil {
-				return fmt.Errorf("remove file %q: %w", fPath, err)
-			}
+		prompt := promptui.Prompt{
+			Label:     "All template files have been templated. Do you want to remove them?",
+			Templates: t,
+			IsConfirm: true,
+		}
+		_, err := prompt.Run()
+		if err != nil {
+			// Immediately exit if the user doesn't want to remove the files.
+			os.Exit(1)
+		}
+	}
+
+	for _, fPath := range files {
+		if err := os.Remove(fPath); err != nil {
+			return fmt.Errorf("removing file %q: %w", fPath, err)
 		}
 	}
 
@@ -235,13 +254,16 @@ func overrideValuesByOpts(data map[string]any, valueOpts []string) error {
 
 func toCapitalKeys(data map[string]any, depth, maxDepth int) error {
 	for k, v := range data {
-		if depth <= maxDepth {
-			newKey := strings.ToUpper(string(k[0])) + k[1:]
-			if newKey != k {
-				data[newKey] = v
-				delete(data, k)
-			}
+		if depth > maxDepth {
+			return nil
 		}
+
+		newKey := strings.ToUpper(string(k[0])) + k[1:]
+		if newKey != k {
+			data[newKey] = v
+			delete(data, k)
+		}
+
 		if v, ok := v.(map[string]any); ok {
 			if err := toCapitalKeys(v, depth+1, maxDepth); err != nil {
 				return err
