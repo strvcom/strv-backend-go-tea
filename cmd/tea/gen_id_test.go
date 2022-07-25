@@ -4,10 +4,13 @@ import (
 	"os"
 	"testing"
 
+	"go.strv.io/tea/util"
+
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_runGenerateIDs(t *testing.T) {
+	cleanupAfterTest := util.CleanupAfterTest(t)
 	input := "../../tests/gen/id/id.go"
 	output := "../../tests/gen/id/id_gen.go"
 

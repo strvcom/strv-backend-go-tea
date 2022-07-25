@@ -7,7 +7,6 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"text/template"
@@ -18,8 +17,8 @@ import (
 )
 
 var (
-	// idCmd represents the id command
-	idCmd = &cobra.Command{
+	// genIDCmd represents the id command
+	genIDCmd = &cobra.Command{
 		Use:   "id",
 		Short: "Generate IDs",
 		Long: `Generate useful methods for serialization/deserialization of IDs.
@@ -33,10 +32,14 @@ This command can also be used as an embedded go generator.
 
 Example:
 	//go:generate tea gen id -i ./id.go -o ./id_gen.go
+	type (
+		User         uint64
+		RefreshToken uint64
+	)
  `,
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := runGenerateIDs(genIDOptions.SourceFilePath, genIDOptions.OutputFilePath); err != nil {
-				os.Exit(err.(*errors.ErrCommand).Code)
+				os.Exit(err.(*errors.CommandError).Code)
 			}
 		},
 	}
@@ -45,9 +48,9 @@ Example:
 )
 
 func init() {
-	idCmd.Flags().StringVarP(&genIDOptions.SourceFilePath, "input", "i", "", "path to file with id declarations")
-	idCmd.Flags().StringVarP(&genIDOptions.OutputFilePath, "output", "o", "", "path to generated output")
-	genCmd.AddCommand(idCmd)
+	genIDCmd.Flags().StringVarP(&genIDOptions.SourceFilePath, "source", "i", "", "path to file with id declarations")
+	genIDCmd.Flags().StringVarP(&genIDOptions.OutputFilePath, "output", "o", "", "path to generated output")
+	genCmd.AddCommand(genIDCmd)
 }
 
 type GenIDOptions struct {
@@ -176,36 +179,37 @@ func extractIDs(filename string) (IDs, error) {
 }
 
 func runGenerateIDs(sourceFilePath, outputFilePath string) error {
-	inputFilePath, err := filepath.Abs(sourceFilePath)
-	if err != nil {
-		return errors.NewErrCommand(fmt.Errorf("absolute file path: %w", err), 2)
+	if !strings.HasSuffix(sourceFilePath, ".go") {
+		return errors.NewCommandError(fmt.Errorf("invalid input file %q: expected .go file", sourceFilePath), 2)
 	}
-	if !strings.HasSuffix(inputFilePath, ".go") {
-		return errors.NewErrCommand(fmt.Errorf("invalid input file %s: expected .go file", inputFilePath), 2)
+	if !strings.HasSuffix(outputFilePath, ".go") {
+		return errors.NewCommandError(fmt.Errorf("invalid output file %q: expected .go file", outputFilePath), 2)
 	}
 
-	ids, err := extractIDs(inputFilePath)
+	ids, err := extractIDs(sourceFilePath)
 	if err != nil {
-		return errors.NewErrCommand(fmt.Errorf("extracting ids: %w", err), 3)
+		return errors.NewCommandError(fmt.Errorf("extracting ids: %w", err), 3)
 	}
 	output, err := ids.generate()
 	if err != nil {
-		return errors.NewErrCommand(fmt.Errorf("generating ids: %w", err), 3)
+		return errors.NewCommandError(fmt.Errorf("generating ids: %w", err), 3)
 	}
 
 	outputFile, err := os.Create(outputFilePath)
 	if err != nil {
-		return errors.NewErrCommand(fmt.Errorf("creating output file: %w", err), 2)
+		return errors.NewCommandError(fmt.Errorf("creating output file: %w", err), 2)
 	}
+	defer func() {
+		if err := outputFile.Close(); err != nil {
+			fmt.Printf("unable to close output file %q: %s", outputFilePath, err.Error())
+		}
+	}()
 
 	if _, err = outputFile.Write([]byte(header)); err != nil {
-		return errors.NewErrCommand(fmt.Errorf("writing output header: %w", err), 2)
+		return errors.NewCommandError(fmt.Errorf("writing output header: %w", err), 2)
 	}
 	if _, err = outputFile.Write(output); err != nil {
-		return errors.NewErrCommand(fmt.Errorf("writing output data: %w", err), 2)
-	}
-	if err = outputFile.Close(); err != nil {
-		return errors.NewErrCommand(fmt.Errorf("closing output file: %w", err), 2)
+		return errors.NewCommandError(fmt.Errorf("writing output data: %w", err), 2)
 	}
 
 	return nil
