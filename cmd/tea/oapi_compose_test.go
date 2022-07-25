@@ -4,13 +4,15 @@ import (
 	"os"
 	"testing"
 
+	"go.strv.io/tea/util"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-var cleanupAfterTest = false // os.Getenv("GO_TEST_CLEANUP") != "false"
-
 func Test_runOAPICompose(t *testing.T) {
+	cleanupAfterTest := util.CleanupAfterTest(t)
+
 	type args struct {
 		opts *OAPIComposeOptions
 	}

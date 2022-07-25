@@ -23,8 +23,6 @@ Provided by ` + colorLinkSTRV,
 	}
 )
 
-type RepoConfig struct{}
-
 func init() {
 	rootCmd.AddCommand(repoCmd)
 }
