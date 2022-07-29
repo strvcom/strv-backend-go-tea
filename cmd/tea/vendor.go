@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,26 +26,31 @@ var (
 	vendorCmd = &cobra.Command{
 		Use:   "vendor",
 		Short: "Vendor private packages",
-		//TODO: Long
 		Long: ` 
 This command provides a set of tools to manage private Go packages.
 
 Note that it is required to have a go in your $GOPATH and $GOROOT set up.
 
 Example:
-	tea vendor --filter=go.strv.io/*
+	tea vendor --filter=go.strv.io
 
 Provided by ` + colorLinkSTRV,
 		Run: func(cmd *cobra.Command, args []string) {
 			if !isGoCommandAvailable() {
 				cmd.Println("go command is not available")
-				log.Fatal("go command is not available")
+				os.Exit(1)
 			}
 
 			packages, err := parseModFile()
 			if err != nil {
 				cmd.Println(fmt.Sprintf("Error parsing %s file: %v", GoModFile, err))
-				log.Fatal(err)
+				os.Exit(1)
+			}
+
+			packagePath, err := getPathToPackages()
+			if err != nil {
+				cmd.Println(fmt.Sprintf("Error getting path to packages: %v", err))
+				os.Exit(1)
 			}
 
 			//run go get <package>@<version>
@@ -54,35 +58,32 @@ Provided by ` + colorLinkSTRV,
 				command := exec.Command("go", "get", p.Name+"@"+p.Version)
 				if err := command.Run(); err != nil {
 					cmd.Println(fmt.Sprintf("Error running \"go get %s@%s\" command: %v", p.Name, p.Version, err))
-					log.Fatal(err)
+					os.Exit(1)
 				}
-			}
 
-			packagePath, err := getPathToPackages()
-			if err != nil {
-				cmd.Println(fmt.Sprintf("Error getting path to packages: %v", err))
-				log.Fatal(err)
-			}
-
-			//copy folder to vendor folder
-			for _, p := range packages {
-				if err := cp.Copy(fmt.Sprintf("%s/%s@%s", packagePath, p.PackageName(), p.Version),
-					fmt.Sprintf("%s/%s@%s", VendorFolder, p.PackageName(), p.Version),
-					cp.Options{AddPermission: ReadWritePermission}); err != nil {
+				if err := cp.Copy(fmt.Sprintf("%s/%s", packagePath, p.VersionedPackageName()),
+					fmt.Sprintf("%s/%s", VendorFolder, p.VersionedPackageName()),
+					cp.Options{AddPermission: ReadWritePermission},
+				); err != nil {
 					cmd.Println(fmt.Sprintf("Unable to copy packages to %s folder: %v", VendorFolder, err))
-					log.Fatal(err)
+					os.Exit(1)
 				}
 			}
 
 			//create tarball
 			if err := CreateTar(VendorFolder); err != nil {
-				log.Fatal(fmt.Sprintf("Unable to create tarball: %v", err))
+				cmd.Println(fmt.Sprintf("Unable to create tarball: %v", err))
+				os.Exit(1)
 			}
 		},
 	}
 
-	vendorOptions         = &VendorOptions{}
-	goPackageCharReplacer = strings.NewReplacer("A", "!a",
+	vendorOptions = &VendorOptions{}
+
+	//go packages in go/pkg/mod folder has a syntax, where all uppercase letters are replaced with
+	//exclamation mark and equivalent lowercase letter
+	goPackageCharReplacer = strings.NewReplacer(
+		"A", "!a",
 		"B", "!b",
 		"C", "!c",
 		"D", "!d",
@@ -127,9 +128,9 @@ type InternalPackage struct {
 	Version string
 }
 
-//PackageName returns the package name from the line
-func (ip *InternalPackage) PackageName() string {
-	return goPackageCharReplacer.Replace(ip.Name)
+//VersionedPackageName returns the transformed package name as it is in modcache
+func (ip *InternalPackage) VersionedPackageName() string {
+	return fmt.Sprintf("%s@%s", goPackageCharReplacer.Replace(ip.Name), ip.Version)
 }
 
 func isGoCommandAvailable() bool {
@@ -210,7 +211,6 @@ func processLine(line string, re *regexp.Regexp) (string, string, bool) {
 		}
 
 		packageName, ver, found := strings.Cut(processedLine, " ")
-		fmt.Println(packageName, ver, found)
 		if !found {
 			return "", "", false
 		}
@@ -236,7 +236,7 @@ func CreateTar(src string) error {
 
 	out, err := os.Create(outputPath)
 	if err != nil {
-		log.Fatalln("Error writing archive:", err)
+		return fmt.Errorf("error writing archive: %v", err)
 	}
 	defer out.Close()
 
@@ -247,17 +247,22 @@ func CreateTar(src string) error {
 	defer tw.Close()
 
 	// walk path
-	return filepath.Walk(src, func(file string, fi os.FileInfo, err error) error {
+	return filepath.WalkDir(src, func(file string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if !fi.Mode().IsRegular() {
+		if d.IsDir() {
 			return nil
 		}
 
+		dInfo, err := d.Info()
+		if err != nil {
+			return err
+		}
+
 		// create a new dir/file header
-		header, err := tar.FileInfoHeader(fi, fi.Name())
+		header, err := tar.FileInfoHeader(dInfo, d.Name())
 		if err != nil {
 			return err
 		}
