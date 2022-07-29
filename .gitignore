@@ -31,3 +31,6 @@ vendor/
 
 # Debugging
 __debug_bin
+
+# Created private packages
+.vendor/

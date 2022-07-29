@@ -2,11 +2,13 @@ module go.strv.io/tea
 
 go 1.18
 
+require github.com/Masterminds/sprig/v3 v3.2.2
+
 require (
-	github.com/Masterminds/sprig/v3 v3.2.2
 	github.com/go-openapi/spec v0.20.6
 	github.com/go-openapi/swag v0.21.1
 	github.com/manifoldco/promptui v0.9.0
+	github.com/otiai10/copy v1.7.0
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.8.0
