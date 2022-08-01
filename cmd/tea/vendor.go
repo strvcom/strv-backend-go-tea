@@ -2,7 +2,6 @@ package main
 
 import (
 	"archive/tar"
-	"bufio"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -41,38 +40,50 @@ Provided by ` + colorLinkSTRV,
 				os.Exit(1)
 			}
 
-			packages, err := parseModFile()
+			re, err := regexp.Compile(vendorOptions.Filter)
 			if err != nil {
-				cmd.Println(fmt.Sprintf("Error parsing %s file: %v", GoModFile, err))
+				cmd.Println("unable to compile regexp: %v", err)
 				os.Exit(1)
+			}
+
+			packages, err := getPackages(re)
+			if err != nil {
+				cmd.Println(fmt.Sprintf("error parsing %s file: %v", GoModFile, err))
+				os.Exit(1)
+			}
+
+			if vendorOptions.DryRun {
+				for _, p := range packages {
+					cmd.Println(p.VersionedPackageName())
+				}
+				return
 			}
 
 			packagePath, err := getPathToPackages()
 			if err != nil {
-				cmd.Println(fmt.Sprintf("Error getting path to packages: %v", err))
+				cmd.Println(fmt.Sprintf("error getting path to packages: %v", err))
 				os.Exit(1)
 			}
 
-			//run go get <package>@<version>
-			for _, p := range packages {
-				command := exec.Command("go", "get", p.Name+"@"+p.Version)
-				if err := command.Run(); err != nil {
-					cmd.Println(fmt.Sprintf("Error running \"go get %s@%s\" command: %v", p.Name, p.Version, err))
-					os.Exit(1)
-				}
+			command := exec.Command("go", "mod", "download")
+			if err := command.Run(); err != nil {
+				cmd.Println(fmt.Sprintf("error running \"go mod download\" command: %v", err))
+				os.Exit(1)
+			}
 
+			for _, p := range packages {
 				if err := cp.Copy(fmt.Sprintf("%s/%s", packagePath, p.VersionedPackageName()),
 					fmt.Sprintf("%s/%s", VendorFolder, p.VersionedPackageName()),
 					cp.Options{AddPermission: ReadWritePermission},
 				); err != nil {
-					cmd.Println(fmt.Sprintf("Unable to copy packages to %s folder: %v", VendorFolder, err))
+					cmd.Println(fmt.Sprintf("unable to copy packages to %s folder: %v", VendorFolder, err))
 					os.Exit(1)
 				}
 			}
 
 			//create tarball
 			if err := CreateTar(VendorFolder); err != nil {
-				cmd.Println(fmt.Sprintf("Unable to create tarball: %v", err))
+				cmd.Println(fmt.Sprintf("unable to create tarball: %v", err))
 				os.Exit(1)
 			}
 		},
@@ -115,12 +126,14 @@ Provided by ` + colorLinkSTRV,
 func init() {
 	vendorCmd.Flags().StringVarP(&vendorOptions.Filter, "filter", "f", "", "Filter the packages to vendor")
 	vendorCmd.Flags().StringVarP(&vendorOptions.Output, "output", "o", "vendor", "Output file")
+	vendorCmd.Flags().BoolVar(&vendorOptions.DryRun, "dry-run", false, "Dry run")
 	rootCmd.AddCommand(vendorCmd)
 }
 
 type VendorOptions struct {
 	Filter string
 	Output string
+	DryRun bool
 }
 
 type InternalPackage struct {
@@ -142,33 +155,26 @@ func isGoCommandAvailable() bool {
 	return true
 }
 
-//TODO replace all `log.Fatal`s
-func parseModFile() ([]InternalPackage, error) {
-	f, err := os.Open(GoModFile)
+func getPackages(re *regexp.Regexp) ([]InternalPackage, error) {
+	command := exec.Command("go", "list", "-m", "all")
+	out, err := command.Output()
 	if err != nil {
-		return nil, fmt.Errorf("unable to open %s file: %w", GoModFile, err)
+		return nil, err
 	}
 
-	defer f.Close()
+	lines := strings.Split(string(out), "\n")
+	packages := make([]InternalPackage, 0, len(lines))
 
-	scanner := bufio.NewScanner(f)
-	r, err := regexp.Compile(vendorOptions.Filter)
-	if err != nil {
-		return nil, fmt.Errorf("unable to compile regexp: %v", err)
-	}
-
-	var packages []InternalPackage
-	for scanner.Scan() {
-		line := scanner.Text()
-		pName, ver, found := processLine(line, r)
-		if !found {
+	for _, line := range lines {
+		splitLine := strings.Split(line, " ")
+		if len(splitLine) != 2 || !re.MatchString(splitLine[0]) {
 			continue
 		}
-		packages = append(packages, InternalPackage{Name: pName, Version: ver})
-	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("unable to read %s file: %w", GoModFile, err)
+		packages = append(packages, InternalPackage{
+			Name:    splitLine[0],
+			Version: splitLine[1],
+		})
 	}
 
 	return packages, nil
@@ -191,34 +197,6 @@ func getPathToPackages() (string, error) {
 	}
 
 	return "~/go/pkg/mod", nil
-}
-
-var modReservedWords = []string{"require", "exclude", "replace"}
-
-func processLine(line string, re *regexp.Regexp) (string, string, bool) {
-	if strings.HasPrefix(line, "module") {
-		return "", "", false
-	}
-
-	processedLine := line
-	for _, word := range modReservedWords {
-		processedLine = strings.TrimPrefix(processedLine, word+" ")
-	}
-	if re.MatchString(line) {
-		processedLine = strings.TrimSpace(processedLine)
-		if processedLine == "(" {
-			return "", "", false
-		}
-
-		packageName, ver, found := strings.Cut(processedLine, " ")
-		if !found {
-			return "", "", false
-		}
-
-		return packageName, ver, true
-	}
-
-	return "", "", false
 }
 
 // CreateTar takes a source and variable writers and walks 'source' writing each file
