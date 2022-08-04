@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -166,7 +165,7 @@ func runRepoTemplate(
 		}
 
 		p := strings.TrimSuffix(fPath, opts.Suffix)
-		if err := ioutil.WriteFile(p, b.Bytes(), 0644); err != nil {
+		if err := os.WriteFile(p, b.Bytes(), 0644); err != nil {
 			return fmt.Errorf("writing file %q: %w", p, err)
 		}
 	}
