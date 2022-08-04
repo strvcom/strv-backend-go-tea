@@ -5,7 +5,7 @@ Universal set of tools to make development in Go as simple as making a cup of te
 ## Installation
 The most simple way to install tea is by Go native installation functionality. Example:
 ```shell
-$ go install go.strv.io/tea/cmd/tea@${version}
+$ go install go.strv.io/tea/cmd/tea@${version:-latest}
 ```
 Version points to a stable [release](https://github.com/strvcom/strv-backend-go-tea/releases).
 
