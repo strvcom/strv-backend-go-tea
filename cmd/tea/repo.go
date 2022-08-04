@@ -11,7 +11,7 @@ var (
 		Long: `This command provides a set of tools to manage local Go repository.
 
 Note that it is required to have a configured .cup file in the root of the repository
-you wish to configure.
+you wish to configure or have one in the home directory as a default.
 
 Example:
 	tea repo -h
