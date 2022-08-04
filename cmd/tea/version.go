@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version string // version is set during build
+var version = "unknown" // version is set during build
 
 var (
 	versionCmd = &cobra.Command{
