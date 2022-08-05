@@ -180,24 +180,24 @@ func extractIDs(filename string) (IDs, error) {
 
 func runGenerateIDs(sourceFilePath, outputFilePath string) error {
 	if !strings.HasSuffix(sourceFilePath, ".go") {
-		return errors.NewCommandError(fmt.Errorf("invalid input file %q: expected .go file", sourceFilePath), 2)
+		return errors.NewCommandError(fmt.Errorf("invalid input file %q: expected .go file", sourceFilePath), errors.CodeDependency)
 	}
 	if !strings.HasSuffix(outputFilePath, ".go") {
-		return errors.NewCommandError(fmt.Errorf("invalid output file %q: expected .go file", outputFilePath), 2)
+		return errors.NewCommandError(fmt.Errorf("invalid output file %q: expected .go file", outputFilePath), errors.CodeDependency)
 	}
 
 	ids, err := extractIDs(sourceFilePath)
 	if err != nil {
-		return errors.NewCommandError(fmt.Errorf("extracting ids: %w", err), 3)
+		return errors.NewCommandError(fmt.Errorf("extracting ids: %w", err), errors.CodeCommand)
 	}
 	output, err := ids.generate()
 	if err != nil {
-		return errors.NewCommandError(fmt.Errorf("generating ids: %w", err), 3)
+		return errors.NewCommandError(fmt.Errorf("generating ids: %w", err), errors.CodeCommand)
 	}
 
 	outputFile, err := os.Create(outputFilePath)
 	if err != nil {
-		return errors.NewCommandError(fmt.Errorf("creating output file: %w", err), 2)
+		return errors.NewCommandError(fmt.Errorf("creating output file: %w", err), errors.CodeIO)
 	}
 	defer func() {
 		if err := outputFile.Close(); err != nil {
@@ -206,10 +206,10 @@ func runGenerateIDs(sourceFilePath, outputFilePath string) error {
 	}()
 
 	if _, err = outputFile.Write([]byte(header)); err != nil {
-		return errors.NewCommandError(fmt.Errorf("writing output header: %w", err), 2)
+		return errors.NewCommandError(fmt.Errorf("writing output header: %w", err), errors.CodeIO)
 	}
 	if _, err = outputFile.Write(output); err != nil {
-		return errors.NewCommandError(fmt.Errorf("writing output data: %w", err), 2)
+		return errors.NewCommandError(fmt.Errorf("writing output data: %w", err), errors.CodeIO)
 	}
 
 	return nil
