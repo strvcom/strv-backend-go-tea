@@ -136,7 +136,7 @@ func runRepoTemplate(
 	var matchFn func(string, string) ([]string, error)
 
 	if opts.Recursive {
-		matchFn = func(dir, glob string) ([]string, error) { return recursiveGlob(dir, glob) }
+		matchFn = recursiveGlob
 	} else {
 		matchFn = func(dir, glob string) ([]string, error) { return filepath.Glob(filepath.Join(dir, glob)) }
 	}
@@ -165,7 +165,7 @@ func runRepoTemplate(
 		}
 
 		p := strings.TrimSuffix(fPath, opts.Suffix)
-		if err := os.WriteFile(p, b.Bytes(), 0644); err != nil {
+		if err := os.WriteFile(p, b.Bytes(), 0600); err != nil {
 			return fmt.Errorf("writing file %q: %w", p, err)
 		}
 	}
@@ -234,6 +234,7 @@ func overrideValuesByOpts(data map[string]any, valueOpts []string) error {
 	v := viper.New()
 	for _, to := range valueOpts {
 		s := strings.Split(to, "=")
+		//nolint:gomnd
 		if len(s) != 2 {
 			return fmt.Errorf("invalid template value: %q", to)
 		}

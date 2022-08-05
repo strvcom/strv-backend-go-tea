@@ -1,9 +1,9 @@
 /*
 This file and this file only is subject to the following license.
 
-MIT License
+# MIT License
 
-Copyright (c) 2022 STRV
+# Copyright (c) 2022 STRV
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -56,20 +56,17 @@ var colorsList = map[string]string{
 func Link(text string, url string) string {
 	if supportsHyperlinks() {
 		return "\x1b]8;;" + url + "\x07" + text + "\x1b]8;;\x07" + parseColor("reset")
-	} else {
-		return text + " (\u200B" + url + ")" + parseColor("reset")
 	}
+	return text + " (\u200B" + url + ")" + parseColor("reset")
 }
 
 // ColorLink creates a colored clickable link in the terminal's stdout.
 func ColorLink(text string, url string, color string) string {
 	textColor := parseColor(color)
-
 	if supportsHyperlinks() {
 		return "\x1b]8;;" + url + "\x07" + textColor + text + "\x1b]8;;\x07" + parseColor("reset")
-	} else {
-		return textColor + text + " (\u200B" + url + "\u200B)" + parseColor("reset")
 	}
+	return textColor + text + " (\u200B" + url + "\u200B)" + parseColor("reset")
 }
 
 // SupportsHyperlinks returns true if the terminal supports hyperlinks.
@@ -135,20 +132,17 @@ func isInList(list []string, value string) bool {
 }
 
 func parseColor(color string) string {
-	acceptedForegroundColors := []string{"black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"}
-
-	acceptedBackgroundColors := []string{"bgBlack", "bgRed", "bgGreen", "bgYellow", "bgBlue", "bgMagenta", "bgCyan", "bgWhite"}
-
 	if color == "" {
 		return ""
 	}
 
+	acceptedForegroundColors := []string{"black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"}
+	acceptedBackgroundColors := []string{"bgBlack", "bgRed", "bgGreen", "bgYellow", "bgBlue", "bgMagenta", "bgCyan", "bgWhite"}
 	var colors []string
 	for _, c := range strings.Split(color, " ") {
 		if c == "" {
 			continue
 		}
-
 		if isInList(acceptedForegroundColors, c) || isInList(acceptedBackgroundColors, c) {
 			colors = append(colors, colorsList[c])
 			continue

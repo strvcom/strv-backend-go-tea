@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -11,7 +12,7 @@ import (
 	"strings"
 	"text/template"
 
-	"go.strv.io/tea/pkg/errors"
+	cmderrors "go.strv.io/tea/pkg/errors"
 
 	"github.com/spf13/cobra"
 )
@@ -39,7 +40,11 @@ Example:
  `,
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := runGenerateIDs(genIDOptions.SourceFilePath, genIDOptions.OutputFilePath); err != nil {
-				os.Exit(err.(*errors.CommandError).Code)
+				e := &cmderrors.CommandError{}
+				if errors.As(err, &e) {
+					os.Exit(e.Code)
+				}
+				os.Exit(-1)
 			}
 		},
 	}
@@ -103,9 +108,13 @@ type IDs map[reflect.Kind][]string
 func (i IDs) generate() ([]byte, error) {
 	output := &bytes.Buffer{}
 	for typ := range i {
+		//nolint:gocritic,exhaustive
 		switch typ {
 		case reflect.Uint64:
 			genData, err := i.generateUint64ID()
+			if err != nil {
+				return nil, fmt.Errorf("generating uint64 ids: %w", err)
+			}
 			if _, err = output.Write(genData); err != nil {
 				return nil, fmt.Errorf("writing uint64 ids: %w", err)
 			}
@@ -180,24 +189,24 @@ func extractIDs(filename string) (IDs, error) {
 
 func runGenerateIDs(sourceFilePath, outputFilePath string) error {
 	if !strings.HasSuffix(sourceFilePath, ".go") {
-		return errors.NewCommandError(fmt.Errorf("invalid input file %q: expected .go file", sourceFilePath), errors.CodeDependency)
+		return cmderrors.NewCommandError(fmt.Errorf("invalid input file %q: expected .go file", sourceFilePath), cmderrors.CodeDependency)
 	}
 	if !strings.HasSuffix(outputFilePath, ".go") {
-		return errors.NewCommandError(fmt.Errorf("invalid output file %q: expected .go file", outputFilePath), errors.CodeDependency)
+		return cmderrors.NewCommandError(fmt.Errorf("invalid output file %q: expected .go file", outputFilePath), cmderrors.CodeDependency)
 	}
 
 	ids, err := extractIDs(sourceFilePath)
 	if err != nil {
-		return errors.NewCommandError(fmt.Errorf("extracting ids: %w", err), errors.CodeCommand)
+		return cmderrors.NewCommandError(fmt.Errorf("extracting ids: %w", err), cmderrors.CodeCommand)
 	}
 	output, err := ids.generate()
 	if err != nil {
-		return errors.NewCommandError(fmt.Errorf("generating ids: %w", err), errors.CodeCommand)
+		return cmderrors.NewCommandError(fmt.Errorf("generating ids: %w", err), cmderrors.CodeCommand)
 	}
 
 	outputFile, err := os.Create(outputFilePath)
 	if err != nil {
-		return errors.NewCommandError(fmt.Errorf("creating output file: %w", err), errors.CodeIO)
+		return cmderrors.NewCommandError(fmt.Errorf("creating output file: %w", err), cmderrors.CodeIO)
 	}
 	defer func() {
 		if err := outputFile.Close(); err != nil {
@@ -206,10 +215,10 @@ func runGenerateIDs(sourceFilePath, outputFilePath string) error {
 	}()
 
 	if _, err = outputFile.Write([]byte(header)); err != nil {
-		return errors.NewCommandError(fmt.Errorf("writing output header: %w", err), errors.CodeIO)
+		return cmderrors.NewCommandError(fmt.Errorf("writing output header: %w", err), cmderrors.CodeIO)
 	}
 	if _, err = outputFile.Write(output); err != nil {
-		return errors.NewCommandError(fmt.Errorf("writing output data: %w", err), errors.CodeIO)
+		return cmderrors.NewCommandError(fmt.Errorf("writing output data: %w", err), cmderrors.CodeIO)
 	}
 
 	return nil

@@ -77,11 +77,12 @@ func initRootConfig() {
 
 	// If a config file is found, read it in.
 	err = viper.ReadInConfig()
-	if errors.As(err, &viper.ConfigFileNotFoundError{}) {
+	switch {
+	case errors.As(err, &viper.ConfigFileNotFoundError{}):
 		// TODO: Add debug log here.
-	} else if err != nil {
+	case err != nil:
 		// TODO: Add warning log here.
-	} else {
+	default:
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
 
@@ -98,13 +99,13 @@ func initRootConfig() {
 
 	// If a local config file is found, read it in and merge it with the default config.
 	err = v.ReadInConfig()
-	if errors.As(err, &viper.ConfigFileNotFoundError{}) {
+	switch {
+	case errors.As(err, &viper.ConfigFileNotFoundError{}):
 		fmt.Fprintln(os.Stderr, "Local config file not found. Skipping.")
-	} else if err != nil {
+	case err != nil:
 		fmt.Fprintln(os.Stderr, err)
-	} else {
+	default:
 		fmt.Fprintln(os.Stderr, "Using config file:", v.ConfigFileUsed())
-
 		// Merge the local config into the existing default config. This will override
 		// any default settings by the local changes.
 		cobra.CheckErr(viper.MergeConfigMap(v.AllSettings()))

@@ -2,10 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
-	"go.strv.io/tea/pkg/errors"
+	cmderrors "go.strv.io/tea/pkg/errors"
 	"go.strv.io/tea/pkg/openapi/load"
 
 	"github.com/go-openapi/spec"
@@ -37,7 +38,11 @@ Example:
  `,
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := runOAPICompose(openapiComposeOptions); err != nil {
-				os.Exit(err.(*errors.CommandError).Code)
+				e := &cmderrors.CommandError{}
+				if errors.As(err, &e) {
+					os.Exit(e.Code)
+				}
+				os.Exit(-1)
 			}
 		},
 	}
@@ -63,7 +68,7 @@ func runOAPICompose(
 ) error {
 	specDoc, err := load.Spec(opts.SourceFilePath)
 	if err != nil {
-		return errors.NewCommandError(err, errors.CodeThirdParty)
+		return cmderrors.NewCommandError(err, cmderrors.CodeThirdParty)
 	}
 
 	exp, err := specDoc.Compose(&spec.ExpandOptions{
@@ -71,27 +76,27 @@ func runOAPICompose(
 		SkipSchemas:  false,
 	})
 	if err != nil {
-		return errors.NewCommandError(err, errors.CodeThirdParty)
+		return cmderrors.NewCommandError(err, cmderrors.CodeThirdParty)
 	}
 
 	b, err := json.Marshal(exp.Spec())
 	if err == nil {
 		d, err := swag.BytesToYAMLDoc(b)
 		if err != nil {
-			return errors.NewCommandError(err, errors.CodeThirdParty)
+			return cmderrors.NewCommandError(err, cmderrors.CodeThirdParty)
 		}
 		b, err = yaml.Marshal(d)
 		if err != nil {
-			return errors.NewCommandError(err, errors.CodeSerializing)
+			return cmderrors.NewCommandError(err, cmderrors.CodeSerializing)
 		}
 	}
 
 	if opts.OutputFilePath == "" {
 		fmt.Println(b)
 	} else {
-		err = os.WriteFile(opts.OutputFilePath, b, 0644)
+		err = os.WriteFile(opts.OutputFilePath, b, 0600)
 		if err != nil {
-			return errors.NewCommandError(err, errors.CodeIO)
+			return cmderrors.NewCommandError(err, cmderrors.CodeIO)
 		}
 	}
 
