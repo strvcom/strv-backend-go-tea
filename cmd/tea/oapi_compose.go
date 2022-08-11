@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"go.strv.io/tea/pkg/errors"
@@ -90,7 +89,7 @@ func runOAPICompose(
 	if opts.OutputFilePath == "" {
 		fmt.Println(b)
 	} else {
-		err = ioutil.WriteFile(opts.OutputFilePath, b, 0644)
+		err = os.WriteFile(opts.OutputFilePath, b, 0644)
 		if err != nil {
 			return errors.NewCommandError(err, errors.CodeIO)
 		}
