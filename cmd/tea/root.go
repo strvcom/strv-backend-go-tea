@@ -42,8 +42,10 @@ func init() {
 		"skip-validatation", false, "whether to skip validation")
 	rootCmd.PersistentFlags().BoolVar(&rootOpt.Yes,
 		"yes",
-		false, "Confirm all prompts (defaults to false)",
+		false, "confirm all prompts (defaults to false)",
 	)
+	rootCmd.PersistentFlags().BoolVar(&rootOpt.Verbose,
+		"verbose", false, "verbose logging")
 
 	validate = validator.New()
 }
@@ -52,6 +54,7 @@ type RootOptions struct {
 	ConfigPath     string
 	SkipValidation bool
 	Yes            bool
+	Verbose        bool
 }
 
 type ContactInfo struct {
@@ -79,11 +82,15 @@ func initRootConfig() {
 	err = viper.ReadInConfig()
 	switch {
 	case errors.As(err, &viper.ConfigFileNotFoundError{}):
-		// TODO: Add debug log here.
+		if rootOpt.Verbose {
+			log(fmt.Sprintf("Config file not found: %s", viper.ConfigFileUsed()))
+		}
 	case err != nil:
-		// TODO: Add warning log here.
+		log(err.Error())
 	default:
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+		if rootOpt.Verbose {
+			log(fmt.Sprintf("Using config file: %s", viper.ConfigFileUsed()))
+		}
 	}
 
 	v := viper.New()
@@ -101,15 +108,24 @@ func initRootConfig() {
 	err = v.ReadInConfig()
 	switch {
 	case errors.As(err, &viper.ConfigFileNotFoundError{}):
-		fmt.Fprintln(os.Stderr, "Local config file not found. Skipping.")
+		if rootOpt.Verbose {
+			log("Local config file not found. Skipping.")
+		}
 	case err != nil:
-		fmt.Fprintln(os.Stderr, err)
+		log(err.Error())
 	default:
-		fmt.Fprintln(os.Stderr, "Using config file:", v.ConfigFileUsed())
+		if rootOpt.Verbose {
+			log(fmt.Sprintf("Using config file: %s", v.ConfigFileUsed()))
+		}
 		// Merge the local config into the existing default config. This will override
 		// any default settings by the local changes.
 		cobra.CheckErr(viper.MergeConfigMap(v.AllSettings()))
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
+}
+
+func log(msg string) {
+	_, err := fmt.Fprintln(os.Stderr, msg)
+	cobra.CheckErr(err)
 }
