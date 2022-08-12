@@ -12,6 +12,8 @@ import (
 
 func Test_runOAPICompose(t *testing.T) {
 	cleanupAfterTest := util.CleanupAfterTest(t)
+	sourceFilePath := "../../tests/oapi/compose/v1/openapi_compose.yaml"
+	outputFilePath := "../../tests/oapi/compose/v1/openapi.yaml"
 
 	type args struct {
 		opts *OAPIComposeOptions
@@ -19,7 +21,7 @@ func Test_runOAPICompose(t *testing.T) {
 	type test struct {
 		name    string
 		args    args
-		cond    func(*test) error
+		cond    func(t *testing.T) error
 		wantErr bool
 	}
 	tests := []test{
@@ -31,17 +33,17 @@ func Test_runOAPICompose(t *testing.T) {
 			name: "success:compose-openapi-compose",
 			args: args{
 				opts: &OAPIComposeOptions{
-					SourceFilePath: "../../tests/oapi/compose/v1/openapi_compose.yaml",
-					OutputFilePath: "../../tests/oapi/compose/v1/openapi.yaml",
+					SourceFilePath: sourceFilePath,
+					OutputFilePath: outputFilePath,
 				},
 			},
-			cond: func(tt *test) error {
-				_, err := os.Stat(tt.args.opts.OutputFilePath)
+			cond: func(t *testing.T) error {
+				t.Helper()
+				_, err := os.Stat(outputFilePath)
 				require.NoError(t, err)
-
 				defer func() {
 					if cleanupAfterTest {
-						require.NoError(t, os.Remove(tt.args.opts.OutputFilePath))
+						require.NoError(t, os.Remove(outputFilePath))
 					}
 				}()
 				return nil
@@ -54,7 +56,7 @@ func Test_runOAPICompose(t *testing.T) {
 				t.Errorf("runOAPICompose() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			assert.NoError(t, tt.cond(&tt))
+			assert.NoError(t, tt.cond(t))
 		})
 	}
 }
