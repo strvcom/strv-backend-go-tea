@@ -1,5 +1,9 @@
 # STRV tea
 
+![Latest release][release]
+[![codecov][codecov-img]][codecov]
+![GitHub][license]
+
 Universal set of tools to make development in Go as simple as making a cup of tea.
 
 ## Installation
@@ -91,3 +95,8 @@ config:
     port: "{{ .Values.config.port }}"
 version: {{ .Version }}
 ```
+
+[release]: https://img.shields.io/github/v/release/strvcom/strv-backend-go-tea
+[codecov]: https://codecov.io/gh/strvcom/strv-backend-go-tea
+[codecov-img]: https://codecov.io/gh/strvcom/strv-backend-go-tea/branch/master/graph/badge.svg?token=A7QFX32CFF
+[license]: https://img.shields.io/github/license/strvcom/strv-backend-go-tea
