@@ -34,6 +34,7 @@ type OperationProps struct {
 	Security     []map[string][]string        `json:"security,omitempty"`
 	Parameters   []specs.Parameter            `json:"parameters,omitempty"`
 	Responses    *Responses                   `json:"responses,omitempty"`
+	RequestBody  *RequestBody                 `json:"requestBody,omitempty"`
 }
 
 // MarshalJSON takes care of serializing operation properties to JSON

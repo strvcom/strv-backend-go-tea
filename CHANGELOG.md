@@ -5,9 +5,14 @@ How to release a new version:
 
 ## [Unreleased]
 
+## [0.1.1] - 2022-09-22
+### Added
+- Added openapi support for extending RequestBody.
+
 ## [0.1.0] - 2022-08-01
 ### Added
 - Added Changelog.
 
-[Unreleased]: https://github.com/strvcom/strv-backend-go-tea/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/strvcom/strv-backend-go-tea/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/strvcom/strv-backend-go-tea/releases/tag/v0.1.1
 [0.1.0]: https://github.com/strvcom/strv-backend-go-tea/releases/tag/v0.1.0
