@@ -432,6 +432,20 @@ func composeOperation(op *Operation, resolver *schemaLoader, basePath string) er
 		}
 	}
 
+	if op.RequestBody != nil {
+		for mediaType := range op.RequestBody.RequestBodyProps.Content {
+			if op.RequestBody.RequestBodyProps.Content == nil {
+				continue
+			}
+			content := op.RequestBody.RequestBodyProps.Content[mediaType]
+
+			if err := composeContent(&content, resolver, basePath); resolver.shouldStopOnError(err) {
+				return err
+			}
+			op.RequestBody.RequestBodyProps.Content[mediaType] = content
+		}
+	}
+
 	return nil
 }
 
