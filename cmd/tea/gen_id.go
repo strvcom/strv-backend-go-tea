@@ -8,7 +8,6 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"reflect"
 	"strings"
 	"text/template"
 
@@ -63,14 +62,6 @@ type GenIDOptions struct {
 	OutputFilePath string
 }
 
-const header = `package id
-
-import (
-	"fmt"
-	"strconv"
-)
-`
-
 const uint64Template = `
 func unmarshalUint64(i *uint64, idTypeName string, data []byte) error {
 	l := len(data)
@@ -102,29 +93,74 @@ func (i *{{ . }}) UnmarshalJSON(data []byte) error {
 }
 {{ end }}`
 
+const uuidTemplate = `
+func unmarshalUUID(u *uuid.UUID, idTypeName string, data []byte) error {
+	if err := u.UnmarshalText(data); err != nil {
+		return fmt.Errorf("parse %q id value: %w", idTypeName, err)
+	}
+	return nil
+}
+{{ range .ids }}
+func New{{ . }}() {{ . }} {
+	return {{ . }}(uuid.New())
+}
+
+func (i {{ . }}) String() string {
+	return uuid.UUID(i).String()
+}
+
+func (i {{ . }}) Empty() bool {
+	return uuid.UUID(i) == uuid.Nil
+}
+
+func (i {{ . }}) MarshalText() ([]byte, error) {
+	return []byte(uuid.UUID(i).String()), nil
+}
+
+func (i {{ . }}) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("\"%s\"", uuid.UUID(i).String())), nil
+}
+
+func (i *{{ . }}) UnmarshalText(data []byte) error {
+	return unmarshalUUID((*uuid.UUID)(i), "{{ . }}", data)
+}
+
+func (i *{{ . }}) UnmarshalJSON(data []byte) error {
+	return unmarshalUUID((*uuid.UUID)(i), "{{ . }}", data)
+}
+{{ end }}`
+
 // IDs stores multiple ID names under one kind.
-type IDs map[reflect.Kind][]string
+type IDs map[string][]string
 
 func (i IDs) generate() ([]byte, error) {
 	output := &bytes.Buffer{}
+	var genData []byte
+	var err error
+
 	for typ := range i {
 		//nolint:gocritic,exhaustive
 		switch typ {
-		case reflect.Uint64:
-			genData, err := i.generateUint64ID()
-			if err != nil {
+		case "uint64":
+			if genData, err = i.generateUint64ID(); err != nil {
 				return nil, fmt.Errorf("generating uint64 ids: %w", err)
 			}
-			if _, err = output.Write(genData); err != nil {
-				return nil, fmt.Errorf("writing uint64 ids: %w", err)
+		case "uuid.UUID":
+			if genData, err = i.generateUUID(); err != nil {
+				return nil, fmt.Errorf("generating uuid.UUID ids: %w", err)
 			}
 		}
+
+		if _, err = output.Write(genData); err != nil {
+			return nil, fmt.Errorf("writing ids: %w", err)
+		}
 	}
+
 	return output.Bytes(), nil
 }
 
 func (i IDs) generateUint64ID() ([]byte, error) {
-	ids, ok := i[reflect.Uint64]
+	ids, ok := i["uint64"]
 	if !ok {
 		return nil, nil
 	}
@@ -134,7 +170,7 @@ func (i IDs) generateUint64ID() ([]byte, error) {
 		"ids": ids,
 	}
 
-	t, err := template.New(reflect.Uint64.String()).Parse(uint64Template)
+	t, err := template.New("uint64").Parse(uint64Template)
 	if err != nil {
 		return nil, err
 	}
@@ -145,13 +181,46 @@ func (i IDs) generateUint64ID() ([]byte, error) {
 	return generatedOutput.Bytes(), nil
 }
 
-func supportedType(typ string) (reflect.Kind, bool) {
-	switch typ {
-	case reflect.Uint64.String():
-		return reflect.Uint64, true
-	default:
-		return reflect.Invalid, false
+func (i IDs) generateUUID() ([]byte, error) {
+	ids, ok := i["uuid.UUID"]
+	if !ok {
+		return nil, nil
 	}
+
+	generatedOutput := &bytes.Buffer{}
+	data := map[string][]string{
+		"ids": ids,
+	}
+
+	t, err := template.New("uuid.UUID").Parse(uuidTemplate)
+	if err != nil {
+		return nil, err
+	}
+	if err = t.Execute(generatedOutput, data); err != nil {
+		return nil, err
+	}
+
+	return generatedOutput.Bytes(), nil
+}
+
+func (i IDs) generateHeader() []byte {
+	var d []byte
+	d = append(d, "package id\n\n"...)
+	d = append(d, "import (\n"...)
+	d = append(d, "\t\"fmt\"\n\n"...)
+
+	if _, ok := i["uuid.UUID"]; ok {
+		d = append(d, "\t\"github.com/google/uuid\"\n"...)
+	}
+
+	return append(d, ")\n"...)
+}
+
+func supportedType(typ string) bool {
+	if typ != "uint64" && typ != "uuid.UUID" {
+		return false
+	}
+	return true
 }
 
 func extractIDs(filename string) (IDs, error) {
@@ -171,16 +240,29 @@ func extractIDs(filename string) (IDs, error) {
 			if !ok || !ts.Name.IsExported() {
 				continue
 			}
+			varName := ts.Name.Name
+			var typeName string
+			// Primitive type
 			typ, ok := ts.Type.(*ast.Ident)
-			if !ok {
+			if ok {
+				typeName = typ.String()
+			}
+			// Composite type
+			compositeTyp, ok := ts.Type.(*ast.SelectorExpr)
+			if ok {
+				if leftSide, ok := compositeTyp.X.(*ast.Ident); ok {
+					typeName = fmt.Sprintf("%s.%s", leftSide.Name, compositeTyp.Sel.Name)
+				} else {
+					typeName = compositeTyp.Sel.Name
+				}
+			}
+			if ok = supportedType(typeName); !ok {
+				if _, err = fmt.Printf("Unsupported id: name=%s, type=%s\n", varName, typeName); err != nil {
+					return nil, err
+				}
 				continue
 			}
-			t, ok := supportedType(typ.String())
-			if !ok {
-				fmt.Printf("Unsupported id: name=%s, type=%s\n", ts.Name.Name, typ.String())
-				continue
-			}
-			ids[t] = append(ids[t], ts.Name.String())
+			ids[typeName] = append(ids[typeName], varName)
 		}
 	}
 
@@ -210,11 +292,11 @@ func runGenerateIDs(sourceFilePath, outputFilePath string) error {
 	}
 	defer func() {
 		if err := outputFile.Close(); err != nil {
-			fmt.Printf("unable to close output file %q: %s", outputFilePath, err.Error())
+			_, _ = fmt.Printf("unable to close output file %q: %s", outputFilePath, err.Error())
 		}
 	}()
 
-	if _, err = outputFile.Write([]byte(header)); err != nil {
+	if _, err = outputFile.Write(ids.generateHeader()); err != nil {
 		return cmderrors.NewCommandError(fmt.Errorf("writing output header: %w", err), cmderrors.CodeIO)
 	}
 	if _, err = outputFile.Write(output); err != nil {

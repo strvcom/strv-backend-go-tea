@@ -39,10 +39,16 @@ id.go:
 ```go
 package id
 
+import (
+	"github.com/google/uuid"
+)
+
 //go:generate tea gen id -i ./id.go -o ./id_gen.go
 
-type User uint64
-
+type (
+	User         uint64
+	RefreshToken uuid.UUID
+)
 ```
 After triggering `go generate ./...` within an app, methods `MarshalText`, `MarshalJSON`, `UnmarshalText` and `UnmarshalJSON` are generated.
 
