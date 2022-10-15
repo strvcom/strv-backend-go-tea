@@ -92,7 +92,7 @@ func runOAPICompose(
 	}
 
 	if opts.OutputFilePath == "" {
-		fmt.Println(b)
+		_, _ = fmt.Println(b)
 	} else {
 		err = os.WriteFile(opts.OutputFilePath, b, 0600)
 		if err != nil {

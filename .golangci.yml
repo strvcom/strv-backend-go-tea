@@ -10,16 +10,13 @@ linters:
   # https://golangci-lint.run/usage/linters/#enabled-by-default-linters
   enable:
     # default linters
-    - deadcode
     - errcheck
     - gosimple
     - govet
     - ineffassign
     - staticcheck
-    - structcheck
     - typecheck
     - unused
-    - varcheck
     # extra linters
     - bidichk
     - bodyclose
@@ -95,6 +92,7 @@ linters-settings:
       - name: time-equal
         severity: warning
         disabled: false
+
       - name: unhandled-error
         severity: warning
         disabled: false
