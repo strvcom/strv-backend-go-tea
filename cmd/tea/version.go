@@ -19,7 +19,7 @@ Example:
 
 Provided by ` + colorLinkSTRV,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println(version)
+			_, _ = fmt.Println(version)
 		},
 	}
 )
