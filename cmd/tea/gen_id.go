@@ -207,8 +207,12 @@ func (i IDs) generateHeader() []byte {
 	var d []byte
 	d = append(d, "package id\n\n"...)
 	d = append(d, "import (\n"...)
-	d = append(d, "\t\"fmt\"\n\n"...)
+	d = append(d, "\t\"fmt\"\n"...)
 
+	if _, ok := i["uint64"]; ok {
+		d = append(d, "\t\"strconv\"\n"...)
+	}
+	d = append(d, "\n"...)
 	if _, ok := i["uuid.UUID"]; ok {
 		d = append(d, "\t\"github.com/google/uuid\"\n"...)
 	}
