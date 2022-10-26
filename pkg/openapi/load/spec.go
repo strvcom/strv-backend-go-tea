@@ -6,10 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"go.strv.io/tea/pkg/openapi/spec"
-
 	oapi "github.com/go-openapi/spec"
 	"github.com/go-openapi/swag"
+	"go.strv.io/tea/pkg/openapi/spec"
 )
 
 func init() {
@@ -138,7 +137,6 @@ func trimData(in json.RawMessage) (json.RawMessage, error) {
 
 // Compose composes the ref fields in the spec document and returns a new spec document
 func (d *Document) Compose(options ...*oapi.ExpandOptions) (*Document, error) {
-
 	swspec := new(spec.Swagger)
 	if err := json.Unmarshal(d.raw, swspec); err != nil {
 		return nil, err
