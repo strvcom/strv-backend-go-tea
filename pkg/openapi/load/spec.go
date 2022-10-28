@@ -6,9 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"go.strv.io/tea/pkg/openapi/spec"
+
 	oapi "github.com/go-openapi/spec"
 	"github.com/go-openapi/swag"
-	"go.strv.io/tea/pkg/openapi/spec"
 )
 
 func init() {

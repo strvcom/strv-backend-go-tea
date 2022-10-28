@@ -21,10 +21,11 @@ func Test_runOAPICompose(t *testing.T) {
 		testOutputFilePath string
 	}
 	type test struct {
-		name    string
-		args    args
-		cond    func(t *testing.T) error
-		wantErr bool
+		name          string
+		args          args
+		cond          func(t *testing.T) error
+		wantErr       bool
+		wantReadError error
 	}
 	tests := []test{
 		{
@@ -46,6 +47,7 @@ func Test_runOAPICompose(t *testing.T) {
 				require.NoError(t, err)
 				return nil
 			},
+			wantReadError: nil,
 		},
 	}
 	for _, tt := range tests {
@@ -62,18 +64,12 @@ func Test_runOAPICompose(t *testing.T) {
 			assert.NoError(t, tt.cond(t))
 
 			tofp, err := os.ReadFile(tt.args.testOutputFilePath)
-			if err != nil {
-				t.Errorf("runOAPICompose() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			require.NoError(t, err, "template output file could not be read")
 
 			ofp, err := os.ReadFile(tt.args.opts.OutputFilePath)
-			if err != nil {
-				t.Errorf("runOAPICompose() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			assert.Equal(t, tt.wantReadError, err)
 
-			assert.Equal(t, ofp, tofp)
+			assert.Equal(t, tofp, ofp)
 		})
 	}
 }

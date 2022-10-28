@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/go-openapi/spec"
-	"github.com/spf13/cobra"
 	cmderrors "go.strv.io/tea/pkg/errors"
 	"go.strv.io/tea/pkg/openapi/load"
+
+	"github.com/go-openapi/spec"
+	"github.com/go-openapi/swag"
+	"github.com/spf13/cobra"
 	yamlV2 "gopkg.in/yaml.v2"
 )
 
@@ -79,7 +81,7 @@ func runOAPICompose(
 
 	b, err := json.Marshal(exp.Spec())
 	if err == nil {
-		d, err := BytesToYAMLDoc(b)
+		d, err := swag.BytesToYAMLDoc(b)
 		if err != nil {
 			return cmderrors.NewCommandError(err, cmderrors.CodeThirdParty)
 		}
@@ -100,13 +102,4 @@ func runOAPICompose(
 	}
 
 	return nil
-}
-
-func BytesToYAMLDoc(data []byte) (any, error) {
-	var document yamlV2.MapSlice // []MapItem // MapItem = {Key, Value any} // preserve order that is present in the document
-	if err := yamlV2.Unmarshal(data, &document); err != nil {
-		return nil, err
-	}
-
-	return document, nil
 }
