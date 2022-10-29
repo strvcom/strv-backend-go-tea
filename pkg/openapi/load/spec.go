@@ -138,7 +138,6 @@ func trimData(in json.RawMessage) (json.RawMessage, error) {
 
 // Compose composes the ref fields in the spec document and returns a new spec document
 func (d *Document) Compose(options ...*oapi.ExpandOptions) (*Document, error) {
-
 	swspec := new(spec.Swagger)
 	if err := json.Unmarshal(d.raw, swspec); err != nil {
 		return nil, err

@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/Masterminds/sprig/v3 v3.2.2
 	github.com/go-openapi/spec v0.20.7
-	github.com/go-openapi/swag v0.22.3
+	github.com/go-openapi/swag v0.21.1
 	github.com/manifoldco/promptui v0.9.0
 	github.com/spf13/cobra v1.6.0
 	github.com/spf13/viper v1.13.0

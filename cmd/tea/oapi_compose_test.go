@@ -14,21 +14,24 @@ func Test_runOAPICompose(t *testing.T) {
 	cleanupAfterTest := util.CleanupAfterTest(t)
 	sourceFilePath := "../../tests/oapi/compose/v1/openapi_compose.yaml"
 	outputFilePath := "../../tests/oapi/compose/v1/openapi.yaml"
+	testOutputFilePath := "../../tests/oapi/compose/v1/openapi_test.yaml"
 
 	type args struct {
-		opts *OAPIComposeOptions
+		opts               *OAPIComposeOptions
+		testOutputFilePath string
 	}
 	type test struct {
-		name    string
-		args    args
-		cond    func(t *testing.T) error
-		wantErr bool
+		name          string
+		args          args
+		cond          func(t *testing.T) error
+		wantErr       bool
+		wantReadError error
 	}
 	tests := []test{
 		{
 			/*
 			   @given valid config and options
-			   @then OpenAPI compose file is composeed and stored into single openapi.yaml
+			   @then OpenAPI compose file is composed and stored into single openapi.yaml
 			*/
 			name: "success:compose-openapi-compose",
 			args: args{
@@ -36,18 +39,15 @@ func Test_runOAPICompose(t *testing.T) {
 					SourceFilePath: sourceFilePath,
 					OutputFilePath: outputFilePath,
 				},
+				testOutputFilePath: testOutputFilePath,
 			},
 			cond: func(t *testing.T) error {
 				t.Helper()
 				_, err := os.Stat(outputFilePath)
 				require.NoError(t, err)
-				defer func() {
-					if cleanupAfterTest {
-						require.NoError(t, os.Remove(outputFilePath))
-					}
-				}()
 				return nil
 			},
+			wantReadError: nil,
 		},
 	}
 	for _, tt := range tests {
@@ -56,7 +56,20 @@ func Test_runOAPICompose(t *testing.T) {
 				t.Errorf("runOAPICompose() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+			defer func() {
+				if cleanupAfterTest {
+					require.NoError(t, os.Remove(outputFilePath))
+				}
+			}()
 			assert.NoError(t, tt.cond(t))
+
+			tofp, err := os.ReadFile(tt.args.testOutputFilePath)
+			require.NoError(t, err, "template output file could not be read")
+
+			ofp, err := os.ReadFile(tt.args.opts.OutputFilePath)
+			assert.Equal(t, tt.wantReadError, err)
+
+			assert.Equal(t, tofp, ofp)
 		})
 	}
 }

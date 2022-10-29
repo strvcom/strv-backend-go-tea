@@ -12,7 +12,7 @@ import (
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/swag"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
+	yamlV2 "gopkg.in/yaml.v2"
 )
 
 var (
@@ -85,7 +85,8 @@ func runOAPICompose(
 		if err != nil {
 			return cmderrors.NewCommandError(err, cmderrors.CodeThirdParty)
 		}
-		b, err = yaml.Marshal(d)
+
+		b, err = yamlV2.Marshal(d)
 		if err != nil {
 			return cmderrors.NewCommandError(err, cmderrors.CodeSerializing)
 		}
