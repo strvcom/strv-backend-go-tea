@@ -70,7 +70,7 @@ func unmarshalUint64(i *uint64, idTypeName string, data []byte) error {
 	}
 	uintNum, err := strconv.ParseUint(string(data), 10, 64)
 	if err != nil {
-		return fmt.Errorf("parse %q id value: %w", idTypeName, err)
+		return fmt.Errorf("parsing %q id value: %w", idTypeName, err)
 	}
 	*i = uintNum
 	return nil
@@ -96,7 +96,14 @@ func (i *{{ . }}) UnmarshalJSON(data []byte) error {
 const uuidTemplate = `
 func unmarshalUUID(u *uuid.UUID, idTypeName string, data []byte) error {
 	if err := u.UnmarshalText(data); err != nil {
-		return fmt.Errorf("parse %q id value: %w", idTypeName, err)
+		return fmt.Errorf("parsing %q id value: %w", idTypeName, err)
+	}
+	return nil
+}
+
+func scanUUID(u *uuid.UUID, idTypeName string, data any) error {
+	if err := u.Scan(data); err != nil {
+		return fmt.Errorf("scanning %q id value: %w", idTypeName, err)
 	}
 	return nil
 }
@@ -127,6 +134,10 @@ func (i *{{ . }}) UnmarshalText(data []byte) error {
 
 func (i *{{ . }}) UnmarshalJSON(data []byte) error {
 	return unmarshalUUID((*uuid.UUID)(i), "{{ . }}", data)
+}
+
+func (i *{{ . }}) Scan(data any) error {
+	return scanUUID((*uuid.UUID)(i), "{{ . }}", data)
 }
 {{ end }}`
 
@@ -212,8 +223,8 @@ func (i IDs) generateHeader() []byte {
 	if _, ok := i["uint64"]; ok {
 		d = append(d, "\t\"strconv\"\n"...)
 	}
-	d = append(d, "\n"...)
 	if _, ok := i["uuid.UUID"]; ok {
+		d = append(d, "\n"...)
 		d = append(d, "\t\"github.com/google/uuid\"\n"...)
 	}
 
