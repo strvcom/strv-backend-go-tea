@@ -12,6 +12,10 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	filePermissions = 0600
+)
+
 var (
 	colorLinkSTRV = termlink.ColorLink("STRV", "https://strv.com", "red bold") + "."
 
