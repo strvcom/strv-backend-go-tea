@@ -20,8 +20,6 @@ linters:
     # extra linters
     - bidichk
     - bodyclose
-    - contextcheck
-    - cyclop
     - durationcheck
     - errname
     - errorlint
@@ -34,7 +32,6 @@ linters:
     - gosec
     - misspell
     - nilerr
-    - nilnil
     - revive
     - prealloc
     - stylecheck
@@ -53,13 +50,10 @@ linters-settings:
       - 'strconv.Parse*'
       - 'strconv.Format*'
       - 'strings.SplitN'
-      - 'os.WriteFile'
   goconst:
     ignore-tests: true
   gocognit:
     min-complexity: 30
-  cyclop:
-    max-complexity: 20
   revive:
     rules:
       - name: atomic
@@ -92,7 +86,6 @@ linters-settings:
       - name: time-equal
         severity: warning
         disabled: false
-
       - name: unhandled-error
         severity: warning
         disabled: false

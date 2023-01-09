@@ -165,7 +165,7 @@ func runRepoTemplate(
 		}
 
 		p := strings.TrimSuffix(fPath, opts.Suffix)
-		if err := os.WriteFile(p, b.Bytes(), 0600); err != nil {
+		if err := os.WriteFile(p, b.Bytes(), filePermissions); err != nil {
 			return fmt.Errorf("writing file %q: %w", p, err)
 		}
 	}
