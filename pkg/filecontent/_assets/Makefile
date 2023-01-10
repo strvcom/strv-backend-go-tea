@@ -1,6 +1,6 @@
 GO := $(shell which go)
 
-APP_VERSION ?= "v0.0.0"
+APP_VERSION ?= "v{{ .Version }}"
 
 .PHONY:
 	run  \

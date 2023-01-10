@@ -93,11 +93,11 @@ type RepoTemplateOptions struct {
 }
 
 type RepoTemplateConfig struct {
-	Module       string                   `json:"module" yaml:"module" validate:"required"`
-	Author       string                   `json:"author" yaml:"author" validate:"required"`
-	Version      string                   `json:"version" yaml:"version" validate:"required,semver"`
-	Values       RepoTemplateValuesMapper `json:"values" yaml:"vars"`
-	Contributors []ContactInfo            `json:"contributors" yaml:"contributors"`
+	Module       string                    `json:"module" yaml:"module" validate:"required"`
+	Author       string                    `json:"author" yaml:"author" validate:"required"`
+	Version      string                    `json:"version" yaml:"version" validate:"required,semver"`
+	Values       *RepoTemplateValuesMapper `json:"values" yaml:"vars,omitempty"`
+	Contributors []ContactInfo             `json:"contributors" yaml:"contributors"`
 }
 
 func (*RepoTemplateConfig) Key() string {
@@ -143,7 +143,7 @@ func runRepoTemplate(
 
 	tData, err := toTemplateData(conf, opts)
 	if err != nil {
-		return fmt.Errorf("capitalizing keys: %w", err)
+		return fmt.Errorf("templating data: %w", err)
 	}
 	if err := toCapitalKeys(tData, 0, 0); err != nil {
 		return fmt.Errorf("capitalizing keys: %w", err)
@@ -191,7 +191,7 @@ func toTemplateData(
 		return nil, errors.New("missing key 'values'")
 	}
 	vals, ok := tData["values"].(map[string]any)
-	if !ok {
+	if !ok && vals != nil {
 		return nil, fmt.Errorf("invalid type of key 'values': expected 'map[string]any', got '%t'", tData["values"])
 	}
 	if err := overrideValuesByOpts(vals, opts.Values); err != nil {

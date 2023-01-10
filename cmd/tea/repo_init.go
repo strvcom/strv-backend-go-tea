@@ -47,6 +47,11 @@ func init() {
 		"m",
 		"strvcom/backend-go-example", "Name of the Go module to initialize",
 	)
+	repoInitCmd.Flags().StringVarP(&repoInitOpt.Author,
+		"author",
+		"a",
+		"STRV", "Name of the author",
+	)
 	repoInitCmd.Flags().BoolVarP(&repoInitOpt.Replace,
 		"replace",
 		"r",
@@ -57,6 +62,7 @@ func init() {
 type RepoInitOptions struct {
 	Dir     string
 	Module  string
+	Author  string
 	Replace bool
 }
 
@@ -73,6 +79,10 @@ func runRepoInit(
 
 	if err := initDefaultFiles(opts.Dir, opts.Replace); err != nil {
 		return fmt.Errorf("initializing default files: %w", err)
+	}
+
+	if err := initTemplates(opts); err != nil {
+		return fmt.Errorf("initializing templates: %w", err)
 	}
 
 	return nil
@@ -113,6 +123,26 @@ func initModule(dir, module string) error {
 	return cmd.Run()
 }
 
+func initTemplates(opts *RepoInitOptions) error {
+	if err := runRepoTemplate(&RepoTemplateConfig{
+		Module:  opts.Module,
+		Author:  opts.Author,
+		Version: "0.1.0",
+	},
+		&RepoTemplateOptions{
+			Dir:    opts.Dir,
+			Glob:   "*.template",
+			Suffix: ".template",
+			Remove: true,
+			// Recursive: true,
+		},
+	); err != nil {
+		return fmt.Errorf("running repo template: %w", err)
+	}
+
+	return nil
+}
+
 // initDefaultDirectories initializes the default Go repository structure.
 func initDefaultDirectories(dir string) error {
 	cmdDir := filepath.Join(dir, cmdDir)
@@ -135,6 +165,10 @@ func initDefaultFiles(dir string, replace bool) error {
 		path    string
 		content string
 	}{
+		{
+			path:    filepath.Join(dir, ".cup.template"),
+			content: filecontent.CupTemplate,
+		},
 		{
 			path:    filepath.Join(dir, ".gitignore"),
 			content: filecontent.Gitignore,

@@ -3,6 +3,8 @@ package filecontent
 import _ "embed"
 
 var (
+	//go:embed _assets/.cup.template
+	CupTemplate string
 	//go:embed _assets/.gitignore
 	Gitignore string
 	//go:embed _assets/.golangci.yml
