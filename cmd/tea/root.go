@@ -43,7 +43,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&rootOpt.ConfigPath,
 		"config", "c", "", "config file (default is $HOME/.cup)")
 	rootCmd.PersistentFlags().BoolVar(&rootOpt.SkipValidation,
-		"skip-validatation", false, "whether to skip validation")
+		"skip-validation", false, "whether to skip validation")
 	rootCmd.PersistentFlags().BoolVar(&rootOpt.Yes,
 		"yes",
 		false, "confirm all prompts (defaults to false)",
