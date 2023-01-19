@@ -124,19 +124,19 @@ func initModule(dir, module string) error {
 }
 
 func initTemplates(opts *RepoInitOptions) error {
-	if err := runRepoTemplate(&RepoTemplateConfig{
+	cmdCfg := &RepoTemplateConfig{
 		Module:  opts.Module,
 		Author:  opts.Author,
 		Version: "0.1.0",
-	},
-		&RepoTemplateOptions{
-			Dir:    opts.Dir,
-			Glob:   "*.template",
-			Suffix: ".template",
-			Remove: true,
-			// Recursive: true,
-		},
-	); err != nil {
+	}
+	cmdOpt := &RepoTemplateOptions{
+		Dir:       opts.Dir,
+		Glob:      "*.template",
+		Suffix:    ".template",
+		Remove:    true,
+		Recursive: true,
+	}
+	if err := runRepoTemplate(cmdCfg, cmdOpt); err != nil {
 		return fmt.Errorf("running repo template: %w", err)
 	}
 
