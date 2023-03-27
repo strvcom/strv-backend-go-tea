@@ -76,10 +76,6 @@ func (i {{ . }}) MarshalText() ([]byte, error) {
 
 const uint64Template = `
 func unmarshalUint64(i *uint64, idTypeName string, data []byte) error {
-	l := len(data)
-	if l > 2 && data[0] == '"' && data[l-1] == '"' {
-		data = data[1 : l-1]
-	}
 	uintNum, err := strconv.ParseUint(string(data), 10, 64)
 	if err != nil {
 		return fmt.Errorf("parsing %q id value: %w", idTypeName, err)
@@ -92,15 +88,7 @@ func (i {{ . }}) MarshalText() ([]byte, error) {
 	return []byte(fmt.Sprintf("%d", i)), nil
 }
 
-func (i {{ . }}) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf("\"%d\"", i)), nil
-}
-
 func (i *{{ . }}) UnmarshalText(data []byte) error {
-	return unmarshalUint64((*uint64)(i), "{{ . }}", data)
-}
-
-func (i *{{ . }}) UnmarshalJSON(data []byte) error {
 	return unmarshalUint64((*uint64)(i), "{{ . }}", data)
 }
 {{ end }}`
@@ -136,15 +124,7 @@ func (i {{ . }}) MarshalText() ([]byte, error) {
 	return []byte(uuid.UUID(i).String()), nil
 }
 
-func (i {{ . }}) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf("\"%s\"", uuid.UUID(i).String())), nil
-}
-
 func (i *{{ . }}) UnmarshalText(data []byte) error {
-	return unmarshalUUID((*uuid.UUID)(i), "{{ . }}", data)
-}
-
-func (i *{{ . }}) UnmarshalJSON(data []byte) error {
 	return unmarshalUUID((*uuid.UUID)(i), "{{ . }}", data)
 }
 

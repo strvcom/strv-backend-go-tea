@@ -7,6 +7,9 @@ How to release a new version:
 ### Added
 - Support for string IDs.
 
+### Removed
+- Useless marshalling/unmarshalling of custom IDs.
+
 ## [0.3.1] - 2023-02-07
 ### Added
 - Repo init command.
