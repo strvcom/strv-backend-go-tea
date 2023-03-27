@@ -4,11 +4,16 @@ How to release a new version:
 - Manually release new version.
 
 ## [Unreleased]
+
+## [0.4.0] - 2023-03-27
 ### Added
 - Support for string IDs.
 
 ### Removed
 - Useless marshalling/unmarshalling of custom IDs.
+
+### Changed
+- Updated Go version to 1.20.
 
 ## [0.3.1] - 2023-02-07
 ### Added
@@ -41,7 +46,8 @@ How to release a new version:
 ### Added
 - Added Changelog.
 
-[Unreleased]: https://github.com/strvcom/strv-backend-go-tea/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/strvcom/strv-backend-go-tea/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/strvcom/strv-backend-go-tea/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/strvcom/strv-backend-go-tea/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/strvcom/strv-backend-go-tea/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/strvcom/strv-backend-go-tea/compare/v0.2.1...v0.2.2
