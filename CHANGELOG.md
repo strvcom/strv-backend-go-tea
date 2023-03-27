@@ -4,6 +4,8 @@ How to release a new version:
 - Manually release new version.
 
 ## [Unreleased]
+### Added
+- Support for string IDs.
 
 ## [0.3.1] - 2023-02-07
 ### Added

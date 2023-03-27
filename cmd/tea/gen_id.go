@@ -13,6 +13,7 @@ import (
 
 	cmderrors "go.strv.io/tea/pkg/errors"
 
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/spf13/cobra"
 )
 
@@ -61,6 +62,17 @@ type GenIDOptions struct {
 	SourceFilePath string
 	OutputFilePath string
 }
+
+const stringTemplate = `{{ range .ids }}
+func (i *{{ . }}) UnmarshalText(data []byte) error {
+	*i = {{ . }}(data)
+	return nil
+}
+
+func (i {{ . }}) MarshalText() ([]byte, error) {
+	return []byte(i), nil
+}
+{{ end }}`
 
 const uint64Template = `
 func unmarshalUint64(i *uint64, idTypeName string, data []byte) error {
@@ -160,6 +172,10 @@ func (i IDs) generate() ([]byte, error) {
 			if genData, err = i.generateUUID(); err != nil {
 				return nil, fmt.Errorf("generating uuid.UUID ids: %w", err)
 			}
+		case "string":
+			if genData, err = i.generateStringID(); err != nil {
+				return nil, fmt.Errorf("generating string ids: %w", err)
+			}
 		}
 
 		if _, err = output.Write(genData); err != nil {
@@ -214,28 +230,74 @@ func (i IDs) generateUUID() ([]byte, error) {
 	return generatedOutput.Bytes(), nil
 }
 
-func (i IDs) generateHeader() []byte {
-	var d []byte
-	d = append(d, "package id\n\n"...)
-	d = append(d, "import (\n"...)
-	d = append(d, "\t\"fmt\"\n"...)
+func (i IDs) generateStringID() ([]byte, error) {
+	ids, ok := i["string"]
+	if !ok {
+		return nil, nil
+	}
 
+	generatedOutput := &bytes.Buffer{}
+	data := map[string][]string{
+		"ids": ids,
+	}
+
+	t, err := template.New("string").Parse(stringTemplate)
+	if err != nil {
+		return nil, err
+	}
+	if err = t.Execute(generatedOutput, data); err != nil {
+		return nil, err
+	}
+
+	return generatedOutput.Bytes(), nil
+}
+
+func (i IDs) generateHeader() []byte {
+	// In case of a new type, add import dependencies to standardImports and externalImports.
+	standardImports := mapset.NewSet[string]()
+	externalImports := mapset.NewSet[string]()
 	if _, ok := i["uint64"]; ok {
-		d = append(d, "\t\"strconv\"\n"...)
+		standardImports.Append("fmt", "strconv")
 	}
 	if _, ok := i["uuid.UUID"]; ok {
-		d = append(d, "\n"...)
-		d = append(d, "\t\"github.com/google/uuid\"\n"...)
+		standardImports.Add("fmt")
+		externalImports.Add("github.com/google/uuid")
+	}
+
+	var (
+		d                  []byte
+		standardImportsLen = len(standardImports.ToSlice())
+		externalImportsLen = len(externalImports.ToSlice())
+	)
+
+	d = append(d, "package id\n"...)
+	if standardImportsLen == 0 && externalImportsLen == 0 {
+		return d
+	}
+
+	d = append(d, "\nimport (\n"...)
+	for _, v := range standardImports.ToSlice() {
+		d = append(d, fmt.Sprintf("\t\"%s\"\n", v)...)
+	}
+
+	if externalImportsLen == 0 {
+		return append(d, ")\n"...)
+	}
+
+	d = append(d, "\n"...)
+	for _, v := range externalImports.ToSlice() {
+		d = append(d, fmt.Sprintf("\t\"%s\"\n", v)...)
 	}
 
 	return append(d, ")\n"...)
 }
 
 func supportedType(typ string) bool {
-	if typ != "uint64" && typ != "uuid.UUID" {
-		return false
+	switch typ {
+	case "uint64", "uuid.UUID", "string":
+		return true
 	}
-	return true
+	return false
 }
 
 func extractIDs(filename string) (IDs, error) {

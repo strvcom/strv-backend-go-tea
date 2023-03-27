@@ -13,6 +13,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
+require github.com/deckarep/golang-set/v2 v2.3.0 // indirect
+
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.1.1 // indirect
