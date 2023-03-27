@@ -8,12 +8,12 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"sort"
 	"strings"
 	"text/template"
 
 	cmderrors "go.strv.io/tea/pkg/errors"
 
-	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/spf13/cobra"
 )
 
@@ -234,20 +234,21 @@ func (i IDs) generateStringID() ([]byte, error) {
 
 func (i IDs) generateHeader() []byte {
 	// In case of a new type, add import dependencies to standardImports and externalImports.
-	standardImports := mapset.NewSet[string]()
-	externalImports := mapset.NewSet[string]()
+	standardImports := make(map[string]struct{})
+	externalImports := make(map[string]struct{})
 	if _, ok := i["uint64"]; ok {
-		standardImports.Append("fmt", "strconv")
+		standardImports["fmt"] = struct{}{}
+		standardImports["strconv"] = struct{}{}
 	}
 	if _, ok := i["uuid.UUID"]; ok {
-		standardImports.Add("fmt")
-		externalImports.Add("github.com/google/uuid")
+		standardImports["fmt"] = struct{}{}
+		externalImports["github.com/google/uuid"] = struct{}{}
 	}
 
 	var (
 		d                  []byte
-		standardImportsLen = len(standardImports.ToSlice())
-		externalImportsLen = len(externalImports.ToSlice())
+		standardImportsLen = len(standardImports)
+		externalImportsLen = len(externalImports)
 	)
 
 	d = append(d, "package id\n"...)
@@ -256,7 +257,7 @@ func (i IDs) generateHeader() []byte {
 	}
 
 	d = append(d, "\nimport (\n"...)
-	for _, v := range standardImports.ToSlice() {
+	for _, v := range sortedMapKeys(standardImports) {
 		d = append(d, fmt.Sprintf("\t\"%s\"\n", v)...)
 	}
 
@@ -265,11 +266,20 @@ func (i IDs) generateHeader() []byte {
 	}
 
 	d = append(d, "\n"...)
-	for _, v := range externalImports.ToSlice() {
+	for _, v := range sortedMapKeys(externalImports) {
 		d = append(d, fmt.Sprintf("\t\"%s\"\n", v)...)
 	}
 
 	return append(d, ")\n"...)
+}
+
+func sortedMapKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func supportedType(typ string) bool {
