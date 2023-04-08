@@ -8,6 +8,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -62,12 +63,19 @@ type GenIDOptions struct {
 	OutputFilePath string
 }
 
+const stringTemplate = `{{ range .ids }}
+func (i *{{ . }}) UnmarshalText(data []byte) error {
+	*i = {{ . }}(data)
+	return nil
+}
+
+func (i {{ . }}) MarshalText() ([]byte, error) {
+	return []byte(i), nil
+}
+{{ end }}`
+
 const uint64Template = `
 func unmarshalUint64(i *uint64, idTypeName string, data []byte) error {
-	l := len(data)
-	if l > 2 && data[0] == '"' && data[l-1] == '"' {
-		data = data[1 : l-1]
-	}
 	uintNum, err := strconv.ParseUint(string(data), 10, 64)
 	if err != nil {
 		return fmt.Errorf("parsing %q id value: %w", idTypeName, err)
@@ -80,15 +88,7 @@ func (i {{ . }}) MarshalText() ([]byte, error) {
 	return []byte(fmt.Sprintf("%d", i)), nil
 }
 
-func (i {{ . }}) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf("\"%d\"", i)), nil
-}
-
 func (i *{{ . }}) UnmarshalText(data []byte) error {
-	return unmarshalUint64((*uint64)(i), "{{ . }}", data)
-}
-
-func (i *{{ . }}) UnmarshalJSON(data []byte) error {
 	return unmarshalUint64((*uint64)(i), "{{ . }}", data)
 }
 {{ end }}`
@@ -124,15 +124,7 @@ func (i {{ . }}) MarshalText() ([]byte, error) {
 	return []byte(uuid.UUID(i).String()), nil
 }
 
-func (i {{ . }}) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf("\"%s\"", uuid.UUID(i).String())), nil
-}
-
 func (i *{{ . }}) UnmarshalText(data []byte) error {
-	return unmarshalUUID((*uuid.UUID)(i), "{{ . }}", data)
-}
-
-func (i *{{ . }}) UnmarshalJSON(data []byte) error {
 	return unmarshalUUID((*uuid.UUID)(i), "{{ . }}", data)
 }
 
@@ -159,6 +151,10 @@ func (i IDs) generate() ([]byte, error) {
 		case "uuid.UUID":
 			if genData, err = i.generateUUID(); err != nil {
 				return nil, fmt.Errorf("generating uuid.UUID ids: %w", err)
+			}
+		case "string":
+			if genData, err = i.generateStringID(); err != nil {
+				return nil, fmt.Errorf("generating string ids: %w", err)
 			}
 		}
 
@@ -214,28 +210,84 @@ func (i IDs) generateUUID() ([]byte, error) {
 	return generatedOutput.Bytes(), nil
 }
 
-func (i IDs) generateHeader() []byte {
-	var d []byte
-	d = append(d, "package id\n\n"...)
-	d = append(d, "import (\n"...)
-	d = append(d, "\t\"fmt\"\n"...)
+func (i IDs) generateStringID() ([]byte, error) {
+	ids, ok := i["string"]
+	if !ok {
+		return nil, nil
+	}
 
+	generatedOutput := &bytes.Buffer{}
+	data := map[string][]string{
+		"ids": ids,
+	}
+
+	t, err := template.New("string").Parse(stringTemplate)
+	if err != nil {
+		return nil, err
+	}
+	if err = t.Execute(generatedOutput, data); err != nil {
+		return nil, err
+	}
+
+	return generatedOutput.Bytes(), nil
+}
+
+func (i IDs) generateHeader() []byte {
+	// In case of a new type, add import dependencies to standardImports and externalImports.
+	standardImports := make(map[string]struct{})
+	externalImports := make(map[string]struct{})
 	if _, ok := i["uint64"]; ok {
-		d = append(d, "\t\"strconv\"\n"...)
+		standardImports["fmt"] = struct{}{}
+		standardImports["strconv"] = struct{}{}
 	}
 	if _, ok := i["uuid.UUID"]; ok {
-		d = append(d, "\n"...)
-		d = append(d, "\t\"github.com/google/uuid\"\n"...)
+		standardImports["fmt"] = struct{}{}
+		externalImports["github.com/google/uuid"] = struct{}{}
+	}
+
+	var (
+		d                  []byte
+		standardImportsLen = len(standardImports)
+		externalImportsLen = len(externalImports)
+	)
+
+	d = append(d, "package id\n"...)
+	if standardImportsLen == 0 && externalImportsLen == 0 {
+		return d
+	}
+
+	d = append(d, "\nimport (\n"...)
+	for _, v := range sortedMapKeys(standardImports) {
+		d = append(d, fmt.Sprintf("\t\"%s\"\n", v)...)
+	}
+
+	if externalImportsLen == 0 {
+		return append(d, ")\n"...)
+	}
+
+	d = append(d, "\n"...)
+	for _, v := range sortedMapKeys(externalImports) {
+		d = append(d, fmt.Sprintf("\t\"%s\"\n", v)...)
 	}
 
 	return append(d, ")\n"...)
 }
 
-func supportedType(typ string) bool {
-	if typ != "uint64" && typ != "uuid.UUID" {
-		return false
+func sortedMapKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
 	}
-	return true
+	sort.Strings(keys)
+	return keys
+}
+
+func supportedType(typ string) bool {
+	switch typ {
+	case "uint64", "uuid.UUID", "string":
+		return true
+	}
+	return false
 }
 
 func extractIDs(filename string) (IDs, error) {

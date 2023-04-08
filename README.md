@@ -46,11 +46,12 @@ import (
 //go:generate tea gen id -i ./id.go -o ./id_gen.go
 
 type (
-	User         uint64
-	RefreshToken uuid.UUID
+	User             uint64
+	RefreshToken     uuid.UUID
+	DeviceIdentifier string
 )
 ```
-After triggering `go generate ./...` within an app, methods `MarshalText`, `MarshalJSON`, `UnmarshalText` and `UnmarshalJSON` are generated.
+After triggering `go generate ./...` within an app, methods `MarshalText` and `UnmarshalText` along with other useful functions are generated.
 
 ### openapi
 This command provides a set of tools to manage OpenAPI specifications.
