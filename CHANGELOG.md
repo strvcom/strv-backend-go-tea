@@ -4,6 +4,8 @@ How to release a new version:
 - Manually release new version.
 
 ## [Unreleased]
+### Added
+- `gen_id` now includes a comment at the top of the generated file to warn developers that the file is, in fact, generated.
 
 ## [0.4.0] - 2023-03-27
 ### Added
