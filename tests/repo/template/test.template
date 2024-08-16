@@ -1,5 +1,0 @@
-module: {{ .Module }}
-author: {{ .Author }}
-config:
-    port: "{{ .Values.config.port }}"
-version: {{ .Version }}

@@ -4,6 +4,8 @@ How to release a new version:
 - Manually release new version.
 
 ## [Unreleased]
+### Removed
+- `openapi compose`, `repo init`, `repo template` commands.
 
 ## [0.4.0] - 2023-03-27
 ### Added
