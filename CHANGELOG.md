@@ -5,7 +5,12 @@ How to release a new version:
 
 ## [Unreleased]
 ### Added
+- Use `debug.ReadBuildInfo` to get correct version.
+- Print to stderr on error.
 - `gen_id` now includes a comment at the top of the generated file to warn developers that the file is, in fact, generated.
+
+### Removed
+- `openapi compose`, `repo init`, `repo template` commands.
 
 ## [0.4.0] - 2023-03-27
 ### Added

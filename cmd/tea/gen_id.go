@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -39,14 +38,8 @@ Example:
 		RefreshToken uint64
 	)
  `,
-		Run: func(cmd *cobra.Command, args []string) {
-			if err := runGenerateIDs(genIDOptions.SourceFilePath, genIDOptions.OutputFilePath); err != nil {
-				e := &cmderrors.CommandError{}
-				if errors.As(err, &e) {
-					os.Exit(e.Code)
-				}
-				os.Exit(-1)
-			}
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runGenerateIDs(genIDOptions.SourceFilePath, genIDOptions.OutputFilePath)
 		},
 	}
 
