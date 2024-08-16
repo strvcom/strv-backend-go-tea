@@ -1,9 +1,0 @@
-repo:
-  template:
-    module: test
-    author: Jane Doe
-    values:
-      - name: config
-        data:
-          port: 8080
-    version: 0.0.0
