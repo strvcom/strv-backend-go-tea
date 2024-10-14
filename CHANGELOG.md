@@ -9,6 +9,9 @@ How to release a new version:
 - Print to stderr on error.
 - `gen_id` now includes a comment at the top of the generated file to warn developers that the file is, in fact, generated.
 
+### Changed
+- Command for ID generating: uses uuidV7 instead of uuidV4.
+
 ### Removed
 - `openapi compose`, `repo init`, `repo template` commands.
 
