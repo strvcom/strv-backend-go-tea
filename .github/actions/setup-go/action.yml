@@ -11,6 +11,6 @@ runs:
         echo "GO_VERSION=${{ inputs.go-version }}" >> $GITHUB_ENV
       shell: bash
     - id: go-setup
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version-file: 'go.mod'

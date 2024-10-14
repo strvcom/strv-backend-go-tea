@@ -103,7 +103,7 @@ func scanUUID(u *uuid.UUID, idTypeName string, data any) error {
 }
 {{ range .ids }}
 func New{{ . }}() {{ . }} {
-	return {{ . }}(uuid.New())
+	return {{ . }}(uuid.Must(uuid.NewV7()))
 }
 
 func (i {{ . }}) String() string {
