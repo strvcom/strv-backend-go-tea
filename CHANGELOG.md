@@ -5,6 +5,10 @@ How to release a new version:
 
 ## [Unreleased]
 
+## [0.5.1] - 2024-10-14
+### Fixed
+- Output preamble in generated file.
+
 ## [0.5.0] - 2024-10-14
 ### Added
 - Use `debug.ReadBuildInfo` to get correct version.
@@ -58,7 +62,8 @@ How to release a new version:
 ### Added
 - Added Changelog.
 
-[Unreleased]: https://github.com/strvcom/strv-backend-go-tea/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/strvcom/strv-backend-go-tea/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/strvcom/strv-backend-go-tea/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/strvcom/strv-backend-go-tea/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/strvcom/strv-backend-go-tea/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/strvcom/strv-backend-go-tea/compare/v0.3.0...v0.3.1
