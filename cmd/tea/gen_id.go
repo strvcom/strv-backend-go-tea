@@ -128,6 +128,10 @@ func (i *{{ . }}) UnmarshalText(data []byte) error {
 func (i *{{ . }}) Scan(data any) error {
 	return scanUUID((*uuid.UUID)(i), "{{ . }}", data)
 }
+
+func (i *{{ .  }}) Equal(other *{{ . }}) bool {
+	return i.String() == other.String()
+}
 {{ end }}`
 
 // IDs stores multiple ID names under one kind.
