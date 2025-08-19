@@ -11,9 +11,9 @@ import (
 	"strings"
 	"text/template"
 
-	cmderrors "go.strv.io/tea/pkg/errors"
-
 	"github.com/spf13/cobra"
+
+	cmderrors "go.strv.io/tea/pkg/errors"
 )
 
 const (
@@ -41,7 +41,7 @@ Example:
 		RefreshToken uint64
 	)
  `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return runGenerateIDs(genIDOptions.SourceFilePath, genIDOptions.OutputFilePath)
 		},
 	}
@@ -139,7 +139,6 @@ func (i IDs) generate() ([]byte, error) {
 	var err error
 
 	for typ := range i {
-		//nolint:gocritic,exhaustive
 		switch typ {
 		case "uint64":
 			if genData, err = i.generateUint64ID(); err != nil {
@@ -360,7 +359,7 @@ func runGenerateIDs(sourceFilePath, outputFilePath string) error {
 		}
 	}()
 
-	if _, err = outputFile.Write([]byte(outputPreamble)); err != nil {
+	if _, err = outputFile.WriteString(outputPreamble); err != nil {
 		return cmderrors.NewCommandError(fmt.Errorf("writing output preamble: %w", err), cmderrors.CodeIO)
 	}
 	if _, err = outputFile.Write(ids.generateHeader()); err != nil {

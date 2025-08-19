@@ -13,16 +13,16 @@ const (
 	CodeDependency
 )
 
+type CommandError struct {
+	err  error
+	Code int
+}
+
 func NewCommandError(err error, code int) *CommandError {
 	return &CommandError{
 		err:  err,
 		Code: code,
 	}
-}
-
-type CommandError struct {
-	err  error
-	Code int
 }
 
 func (e *CommandError) Error() string {

@@ -17,7 +17,7 @@ Example:
 	tea version
 
 Provided by ` + colorLinkSTRV,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			version := "unknown"
 			buildInfo, ok := debug.ReadBuildInfo()
 			if ok {
