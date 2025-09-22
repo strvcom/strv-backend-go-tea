@@ -4,9 +4,10 @@ import (
 	"os"
 	"testing"
 
-	"go.strv.io/tea/util"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"go.strv.io/tea/util"
 )
 
 func Test_runGenerateIDs(t *testing.T) {
@@ -33,7 +34,7 @@ func Test_runGenerateIDs(t *testing.T) {
 			},
 			cond: func() {
 				_, err := os.Stat(output)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				if cleanupAfterTest {
 					assert.NoError(t, os.Remove(output))
 				}
