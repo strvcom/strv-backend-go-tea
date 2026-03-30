@@ -2,11 +2,12 @@ name: Vulnerability scan
 
 on:
   pull_request:
-  push:
-    branches:
-      - 'master'
-  release:
-    types: [ published ]
+    paths:
+      - go.mod
+      - go.sum
+  schedule:
+    - cron: "0 4 * * 1" # Run scan on Monday 04:00 UTC
+  workflow_dispatch:
 
 jobs:
   vulnerability-scan:
@@ -14,14 +15,37 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      issues: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Install Go
         uses: ./.github/actions/setup-go
+      - name: Go generate
+        run: make generate
       - name: Install OSV Scanner
         run: |
-          go install github.com/google/osv-scanner/v2/cmd/osv-scanner@latest
+          go install github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.3.5
       - name: Run OSV Scanner
+        # There needs to be "bash {0}" command to ensure that Github will not add "-e" option to it.
+        shell: bash {0}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          osv-scanner -r .
+          SCANNER_OUT=$(osv-scanner --format json -r .)
+          EXIT_CODE=$?
+          if [ $EXIT_CODE -eq 1 ]; then
+            issues=$(gh issue list -S OSV -L 100)
+            echo "$SCANNER_OUT" | jq  -c '.results[].packages[]' | while read -r i; do
+              packageName=$(echo "$i" | jq --raw-output '.package.name')
+              echo "$i" | jq --raw-output '.vulnerabilities[] | .id' | while read -r issueID; do
+                if [ "$(echo "$issues" | grep "$packageName:$issueID" > /dev/null; echo $?)" -eq 1 ]
+                then
+                  gh issue create --title "OSV Scanner: $packageName:$issueID" --body "Description of the issue: https://osv.dev/$issueID"
+                fi
+              done
+            done
+          elif [ $EXIT_CODE -ne 0 ]; then
+           echo "osv-scanner failed with exit code $EXIT_CODE" >&2
+           exit $EXIT_CODE
+          fi
