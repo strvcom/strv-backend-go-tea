@@ -138,7 +138,7 @@ func (i IDs) generate() ([]byte, error) {
 	var genData []byte
 	var err error
 
-	for typ := range i {
+	for _, typ := range sortedMapKeys(i) {
 		switch typ {
 		case "uint64":
 			if genData, err = i.generateUint64ID(); err != nil {
